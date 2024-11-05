@@ -17,4 +17,4 @@ VoiceClips is a voice-activated clipping software designed for gamers who want a
 - **Python 3.8+**: Make sure Python is installed.
 - **FFmpeg**: Required for screen recording and clipping. Install it from [ffmpeg.org](https://ffmpeg.org/).
 - **Vosk**: For offline voice recognition, install the Vosk Python package and download a language model.
-- **PyQt5** (Optional): For a graphical user interface.
+- **PyQt5** (Optional): For a graphical user interface
