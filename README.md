@@ -9,7 +9,6 @@
 - 🎧 **Voice-command clipping** (e.g., "Clip the last X seconds")
 - 🔊 **Saves audio clips in high-quality formats**
 - ⚙️ **Customizable clip duration and save paths**
-- 🖥️ (Optional) **User-friendly GUI**
 
 ---
 
