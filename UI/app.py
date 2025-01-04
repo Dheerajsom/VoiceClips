@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import Label, Button, Frame
 from PIL import Image, ImageTk
-from recorder import ScreenRecorder
+from .recorder import ScreenRecorder
 
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
