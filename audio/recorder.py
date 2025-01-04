@@ -1,25 +1,21 @@
 import pyaudio
 
-def record_audio(duration=5, settings=None):
-    if settings is None:
-        settings = {
-            'format': pyaudio.paInt16,
-            'channels': 1,
-            'rate': 44100,
-            'frames_per_buffer': 1024,
-        }
-    audio = pyaudio.PyAudio()
-    stream = audio.open(format=settings['format'], channels=settings['channels'],
-                        rate=settings['rate'], input=True,
-                        frames_per_buffer=settings['frames_per_buffer'])
+class AudioRecorder:
+    def __init__(self, settings):
+        self.audio = pyaudio.PyAudio()
+        self.settings = settings
+        self.stream = self.audio.open(format=pyaudio.paInt16, channels=1,
+                                      rate=self.settings['sample_rate'], input=True,
+                                      frames_per_buffer=self.settings['chunk_size'])
 
-    frames = []
-    for i in range(0, int(settings['rate'] / settings['frames_per_buffer'] * duration)):
-        data = stream.read(settings['frames_per_buffer'])
-        frames.append(data)
+    def record(self, duration):
+        frames = []
+        for _ in range(int(self.settings['sample_rate'] / self.settings['chunk_size'] * duration)):
+            data = self.stream.read(self.settings['chunk_size'])
+            frames.append(data)
+        return b''.join(frames)
 
-    stream.stop_stream()
-    stream.close()
-    audio.terminate()
-
-    return b''.join(frames)
+    def close(self):
+        self.stream.stop_stream()
+        self.stream.close()
+        self.audio.terminate()

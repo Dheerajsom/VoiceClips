@@ -1,11 +1,13 @@
 import tkinter as tk
+from tkinter import messagebox
 
 def run_app():
     root = tk.Tk()
     root.title("Voice Clips")
-    root.geometry('400x200')
 
-    label = tk.Label(root, text="Welcome to Voice Clips!")
-    label.pack(pady=20)
+    def on_exit():
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            root.destroy()
 
+    root.protocol("WM_DELETE_WINDOW", on_exit)
     root.mainloop()
