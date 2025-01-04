@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import Label, Button, Frame
 from PIL import Image, ImageTk
-from recorder import ScreenRecorder
+from UI.recorder import ScreenRecorder
 
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
@@ -16,7 +16,7 @@ recorder = None
 def start_recording():
     global recorder, status_label
     if not recorder or not recorder.running:
-        recorder = ScreenRecorder('test_video.avi', 10, (1366, 768), on_new_frame=update_video_frame)
+        recorder = ScreenRecorder('test_video.avi', 60, (1366, 768), on_new_frame=update_video_frame)
         recorder.start_recording_thread(status_label)
     else:
         print("Recording is already in progress.")
@@ -56,5 +56,3 @@ def run_app():
 
     root.mainloop()
 
-if __name__ == "__main__":
-    run_app()
