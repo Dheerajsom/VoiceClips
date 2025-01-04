@@ -1,7 +1,7 @@
-
 import tkinter as tk
 from tkinter import messagebox, simpledialog, Label, Entry
-from widgets import create_button, create_label, create_entry
+from .widgets import create_button, create_label, create_entry
+
 
 def start_recording():
     # Placeholder function for starting the recording
@@ -21,7 +21,7 @@ def change_frame_rate():
 
 def run_app():
     root = tk.Tk()
-    root.title("Voice Clips")
+    root.title("VoiceClips")
 
     # Define dimensions and positioning
     window_width = 1200
@@ -47,6 +47,3 @@ def run_app():
     status_label = create_label(root, "Status: Ready")
 
     root.mainloop()
-
-if __name__ == "__main__":
-    run_app()
