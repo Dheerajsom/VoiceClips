@@ -55,7 +55,7 @@ def run_app():
     position_top = int(screen_height / 2 - window_height / 2)
     position_right = int(screen_width / 2 - window_width / 2)
     root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
-    root.iconbitmap('path_to_icon.ico')  # Set the window icon
+    root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')  # Set the window icon
 
     # Buttons
     create_button(root, "Start Recording", start_recording_thread)
