@@ -2,6 +2,7 @@ import threading
 import cv2
 import numpy as np
 import pyautogui
+from config import VIDEO_SETTINGS
 
 class ScreenRecorder:
     def __init__(self, filename='output.avi', fps=12.0, resolution=(1920, 1080)):
@@ -24,6 +25,14 @@ class ScreenRecorder:
             frame = cv2.resize(frame, self.resolution)
             with self.lock:
                 self.out.write(frame)
+    def start_recording_thread():
+        global recorder
+        if not recorder or not recorder.running:
+            thread = Thread(target=start_recording)
+            thread.start()
+            status_label.config(text="Status: Recording...")
+        else:
+            print("Recording is already in progress.")
 
     def stop_recording(self):
         with self.lock:
@@ -33,10 +42,17 @@ class ScreenRecorder:
                 cv2.destroyAllWindows()
                 print("Recording stopped.")
 
-    def change_frame_rate(self, new_fps):
-        with self.lock:
-            self.fps = new_fps
-            # Restart the video writer with new frame rate
-            self.out = cv2.VideoWriter(self.filename, self.codec, self.fps, self.resolution)
-            print(f"Frame rate changed to: {new_fps} fps")
+    def change_frame_rate():
+        if recorder:
+            new_rate = frame_rate_entry.get()
+            try:
+                new_rate = float(new_rate)
+                if new_rate != recorder.fps:
+                    recorder.change_frame_rate(new_rate)
+                    status_label.config(text=f"Status: Frame rate set to {new_rate} fps")
+            except ValueError:
+                status_label.config(text="Invalid frame rate entered.")
+        else:
+            print("Recorder not initialized.")
+
 

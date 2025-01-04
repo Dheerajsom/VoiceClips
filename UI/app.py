@@ -4,8 +4,9 @@ from threading import Thread
 import sys
 sys.path.append('..')  # Ensure that this script can access modules in the parent directory
 
-from .widgets import create_button, create_label, create_entry
+from widgets import create_button, create_label, create_entry
 from audio.recorder import ScreenRecorder
+from config import VIDEO_SETTINGS
 
 recorder = None  # Initialize the recorder as a global variable
 
