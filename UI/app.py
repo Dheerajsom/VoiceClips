@@ -32,9 +32,10 @@ def stop_recording():
 def run_app():
     global video_display_label, status_label
     root = tk.Tk()
-    root.title("Screen Recorder")
+    root.title("VoiceClips")
     root.geometry("1200x700")  # Window size
-
+    root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')
+    
     # Video display label
     video_display_label = Label(root)
     video_display_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
