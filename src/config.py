@@ -6,7 +6,7 @@ AUDIO_SETTINGS = {
 }
 
 VIDEO_SETTINGS = {
-    'frame_rate': 30,
+    'frame_rate': 60,
     'resolution': '1920x1080',
 }
 
