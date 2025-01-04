@@ -26,7 +26,7 @@ def stop_recording():
     global recorder, status_label
     if recorder:
         recorder.stop_recording()
-        status_label.config(text="Recording stopped.File saved as: "+ recorder.filename)
+        status_label.config(text="Recording stopped. File saved as: "+ recorder.filename)
     else:
         status_label.config(text="No recording in progress.")
 
