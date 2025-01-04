@@ -1,7 +1,7 @@
 from UI.app import run_app
 
 def main():
-    print("Starting the application...")
+    print("Opening VoiceClips...")
     run_app()
     
 
