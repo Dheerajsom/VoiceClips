@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import Label, Button, Frame
 from PIL import Image, ImageTk
-from recorder import ScreenRecorder
+from .recorder import ScreenRecorder
 
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
@@ -35,7 +35,7 @@ def run_app():
     root.title("VoiceClips")
     root.geometry("1200x700")  # Window size
     root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')
-    
+
     # Video display label
     video_display_label = Label(root)
     video_display_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
