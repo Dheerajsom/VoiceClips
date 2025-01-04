@@ -16,7 +16,7 @@ recorder = None
 def start_recording():
     global recorder, status_label
     if not recorder or not recorder.running:
-        recorder = ScreenRecorder('test_video.avi', 60, (1366, 768), on_new_frame=update_video_frame)
+        recorder = ScreenRecorder('test_video.mp4', 60, (1366, 768), on_new_frame=update_video_frame)
         recorder.start_recording_thread(status_label)
     else:
         print("Recording is already in progress.")

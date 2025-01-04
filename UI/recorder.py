@@ -5,7 +5,7 @@ import pyautogui
 from threading import Thread
 
 class ScreenRecorder:
-    def __init__(self, filename='output.avi', fps=12.0, resolution=(1920, 1080), on_new_frame=None):
+    def __init__(self, filename='output.avi', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
         self.filename = filename
         self.fps = fps
         self.resolution = resolution
