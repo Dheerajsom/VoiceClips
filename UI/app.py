@@ -1,9 +1,13 @@
 import tkinter as tk
 from tkinter import messagebox
 
+
 def run_app():
     root = tk.Tk()
     root.title("Voice Clips")
+
+    # Set the window icon using a file path with double backslashes
+    root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')
 
     # Default window dimensions
     window_width = 1200
@@ -19,5 +23,6 @@ def run_app():
 
     # Set the position and size of the window
     root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
+
 
     root.mainloop()
