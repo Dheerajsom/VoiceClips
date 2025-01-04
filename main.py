@@ -1,6 +1,4 @@
-print("Starting main.py")
 from UI.app import run_app
-print("Imported run_app")
 
 def main():
     print("In main function")

@@ -34,5 +34,5 @@ class ScreenRecorder:
 # Example usage
 if __name__ == "__main__":
     recorder = ScreenRecorder(filename='test_video.avi', fps=10, resolution=(1366, 768))
-    recorder.record_screen(duration=10)
+    recorder.record_screen(duration=20)
 
