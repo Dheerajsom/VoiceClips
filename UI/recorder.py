@@ -7,11 +7,11 @@ import wave
 import pyaudio
 
 class ScreenRecorder:
-    def __init__(self, filename='output.mov', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
+    def __init__(self, filename='output.mp4', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
         self.filename = filename
         self.fps = fps
         self.resolution = resolution
-        self.codec = cv2.VideoWriter_fourcc(*'XVID')
+        self.codec = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = None
         self.running = False
         self.lock = threading.Lock()
@@ -19,8 +19,8 @@ class ScreenRecorder:
 
         self.audio = pyaudio.PyAudio()
         try:
-            self.stream = self.audio.open(format=pyaudio.paInt24, channels=1,
-                                          rate=48100, input=True, frames_per_buffer=1024)
+            self.stream = self.audio.open(format=pyaudio.paInt16, channels=1,
+                                          rate=44100, input=True, frames_per_buffer=1024)
         except OSError as e:
             print("Failed to open audio stream:", e)
             self.stream = None
@@ -80,7 +80,7 @@ class ScreenRecorder:
     def save_audio(self):
         """Save the recorded audio to a file."""
         wf = wave.open(self.filename.replace('.avi', '.wav'), 'wb')
-        wf.setnchannels(2)
+        wf.setnchannels(1)
         wf.setsampwidth(self.audio.get_sample_size(pyaudio.paInt16))
         wf.setframerate(44100)
         wf.writeframes(b''.join(self.frames))
