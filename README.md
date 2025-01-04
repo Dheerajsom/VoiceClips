@@ -5,6 +5,7 @@
 ---
 
 ## **Features**
+- 🔴 **High-quality screen recording**
 - 🎙️ **Real-time audio recording**
 - 🎧 **Voice-command clipping** (e.g., "Clip the last X seconds")
 - 🔊 **Saves audio clips in high-quality formats**
@@ -14,12 +15,4 @@
 
 ## **Installation**
 
-### **Requirements**
-- Python 3.8 or higher
-- Supported operating system: Windows, macOS, or Linux
-- Libraries and tools (automatically installed via `requirements.txt`):
-  - `pyaudio`
-  - `speechrecognition`
-  - `numpy`
-  - `soundfile`
-  - `ffmpeg-python`
+Download link coming soon!
