@@ -1,19 +1,21 @@
 import tkinter as tk
 from tkinter import messagebox
 from threading import Thread
-import sys
-sys.path.append('..')  # Ensure that this script can access modules in the parent directory
 
 from widgets import create_button, create_label, create_entry
-from audio.recorder import ScreenRecorder
-from config import VIDEO_SETTINGS
+from recorder import ScreenRecorder
 
-recorder = None  # Initialize the recorder as a global variable
+recorder = None
 
 def start_recording():
     global recorder
-    recorder = ScreenRecorder('test_video.avi', 10, (1366, 768))  # Define video filename and settings
-    recorder.start_recording()
+    if not recorder or not recorder.running:
+        recorder = ScreenRecorder('test_video.avi', 10, (1366, 768))
+        thread = Thread(target=recorder.start_recording)
+        thread.start()
+        status_label.config(text="Status: Recording...")
+    else:
+        print("Recording is already in progress.")
 
 def stop_recording():
     global recorder
@@ -23,32 +25,22 @@ def stop_recording():
     else:
         print("No recording in progress.")
 
-def start_recording_thread():
-    global recorder
-    if not recorder or not recorder.running:
-        thread = Thread(target=start_recording)
-        thread.start()
-        status_label.config(text="Status: Recording...")
-    else:
-        print("Recording is already in progress.")
-
 def change_frame_rate():
-    if recorder:
-        new_rate = frame_rate_entry.get()
-        try:
-            new_rate = float(new_rate)
+    global recorder
+    new_rate = frame_rate_entry.get()
+    try:
+        new_rate = float(new_rate)
+        if recorder:
             recorder.change_frame_rate(new_rate)
             status_label.config(text=f"Status: Frame rate set to {new_rate} fps")
-        except ValueError:
-            status_label.config(text="Invalid frame rate entered.")
-    else:
-        print("Recorder not initialized.")
+        else:
+            print("Recorder not initialized.")
+    except ValueError:
+        status_label.config(text="Invalid frame rate entered.")
 
 def run_app():
     root = tk.Tk()
     root.title("Voice Clips")
-
-    # Define dimensions and positioning
     window_width = 1200
     window_height = 700
     screen_width = root.winfo_screenwidth()
@@ -56,18 +48,15 @@ def run_app():
     position_top = int(screen_height / 2 - window_height / 2)
     position_right = int(screen_width / 2 - window_width / 2)
     root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
-    root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')  # Set the window icon
+    root.iconbitmap('voiceclipslogo.ico')  # Adjust this path to a relative or absolute path that works for your project
 
-    # Buttons
-    create_button(root, "Start Recording", start_recording_thread)
+    create_button(root, "Start Recording", start_recording)
     create_button(root, "Stop Recording", stop_recording)
     create_button(root, "Change Frame Rate", change_frame_rate)
 
-    # Entry for frame rate
     global frame_rate_entry
-    frame_rate_entry = create_entry(root, "30")  # Default frame rate
+    frame_rate_entry = create_entry(root, "30")
 
-    # Status label
     global status_label
     status_label = create_label(root, "Status: Ready")
 
