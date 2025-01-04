@@ -1,64 +1,58 @@
 import tkinter as tk
-from tkinter import messagebox
-from threading import Thread
-
-from widgets import create_button, create_label, create_entry
+from tkinter import Label, Button, Frame
+from PIL import Image, ImageTk
 from recorder import ScreenRecorder
+
+def update_video_frame(frame):
+    """Update the GUI with new video frames."""
+    global video_display_label
+    image = Image.fromarray(frame)  # Convert NumPy array to PIL Image
+    photo = ImageTk.PhotoImage(image)  # Convert PIL Image to PhotoImage
+    video_display_label.config(image=photo)
+    video_display_label.image = photo  # Keep a reference to avoid garbage collection
 
 recorder = None
 
 def start_recording():
-    global recorder
+    global recorder, status_label
     if not recorder or not recorder.running:
-        recorder = ScreenRecorder('test_video.avi', 10, (1366, 768))
-        thread = Thread(target=recorder.start_recording)
-        thread.start()
-        status_label.config(text="Status: Recording...")
+        recorder = ScreenRecorder('test_video.avi', 10, (1366, 768), on_new_frame=update_video_frame)
+        recorder.start_recording_thread(status_label)
     else:
         print("Recording is already in progress.")
 
 def stop_recording():
-    global recorder
+    global recorder, status_label
     if recorder:
         recorder.stop_recording()
-        status_label.config(text="Status: Recording stopped.")
+        status_label.config(text="Recording stopped.")
     else:
-        print("No recording in progress.")
-
-def change_frame_rate():
-    global recorder
-    new_rate = frame_rate_entry.get()
-    try:
-        new_rate = float(new_rate)
-        if recorder:
-            recorder.change_frame_rate(new_rate)
-            status_label.config(text=f"Status: Frame rate set to {new_rate} fps")
-        else:
-            print("Recorder not initialized.")
-    except ValueError:
-        status_label.config(text="Invalid frame rate entered.")
+        status_label.config(text="No recording in progress.")
 
 def run_app():
+    global video_display_label, status_label
     root = tk.Tk()
-    root.title("Voice Clips")
-    window_width = 1200
-    window_height = 700
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    position_top = int(screen_height / 2 - window_height / 2)
-    position_right = int(screen_width / 2 - window_width / 2)
-    root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
-    root.iconbitmap('voiceclipslogo.ico')  # Adjust this path to a relative or absolute path that works for your project
+    root.title("Screen Recorder")
+    root.geometry("1200x700")  # Window size
 
-    create_button(root, "Start Recording", start_recording)
-    create_button(root, "Stop Recording", stop_recording)
-    create_button(root, "Change Frame Rate", change_frame_rate)
+    # Video display label
+    video_display_label = Label(root)
+    video_display_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-    global frame_rate_entry
-    frame_rate_entry = create_entry(root, "30")
+    # Status label at the bottom
+    status_label = Label(root, text="Status: Ready")
+    status_label.pack(side=tk.BOTTOM, fill=tk.X)
 
-    global status_label
-    status_label = create_label(root, "Status: Ready")
+    # Control frame for buttons
+    control_frame = Frame(root)
+    control_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+    # Buttons for controlling recording
+    start_btn = Button(control_frame, text="Start Recording", command=start_recording)
+    start_btn.pack(side=tk.LEFT, padx=5, pady=5)
+
+    stop_btn = Button(control_frame, text="Stop Recording", command=stop_recording)
+    stop_btn.pack(side=tk.LEFT, padx=5, pady=5)
 
     root.mainloop()
 
