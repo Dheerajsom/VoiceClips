@@ -7,7 +7,7 @@ import wave
 import pyaudio
 
 class ScreenRecorder:
-    def __init__(self, filename='output.mp4', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
+    def __init__(self, filename='output.mov', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
         self.filename = filename
         self.fps = fps
         self.resolution = resolution
@@ -19,8 +19,8 @@ class ScreenRecorder:
 
         self.audio = pyaudio.PyAudio()
         try:
-            self.stream = self.audio.open(format=pyaudio.paInt16, channels=1,
-                                          rate=44100, input=True, frames_per_buffer=1024)
+            self.stream = self.audio.open(format=pyaudio.paInt24, channels=1,
+                                          rate=48100, input=True, frames_per_buffer=1024)
         except OSError as e:
             print("Failed to open audio stream:", e)
             self.stream = None

@@ -17,7 +17,7 @@ recorder = None
 def start_recording():
     global recorder, status_label
     if not recorder or not recorder.running:
-        recorder = ScreenRecorder('test_video.mp4', 60, (1366, 768), on_new_frame=update_video_frame)
+        recorder = ScreenRecorder('test_video.mov', 60, (1366, 768), on_new_frame=update_video_frame)
         recorder.start_recording_thread(status_label)
     else:
         print("Recording is already in progress.")
@@ -39,7 +39,7 @@ def run_app():
 
     filename_entry = Entry(root, width=50)
     filename_entry.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
-    filename_entry.insert(0, "test_video.mp4")
+    filename_entry.insert(0, "test_video.mov")
 
     
     # Video display label
