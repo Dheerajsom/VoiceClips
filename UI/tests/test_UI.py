@@ -1,6 +1,6 @@
 import pytest
 import tkinter as tk
-from src.gui.app import run_app
+from UI.app import run_app
 
 def test_gui_load():
     try:
