@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import messagebox, simpledialog, Label, Entry
 from widgets import create_button, create_label, create_entry
@@ -47,6 +46,3 @@ def run_app():
     status_label = create_label(root, "Status: Ready")
 
     root.mainloop()
-
-if __name__ == "__main__":
-    run_app()

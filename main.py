@@ -1,9 +1,12 @@
+print("Starting main.py")
 from UI.app import run_app
+print("Imported run_app")
 
 def main():
-    print("Opening VoiceClips...")
+    print("In main function")
     run_app()
-    
 
 if __name__ == "__main__":
+    print("Running main")
     main()
+
