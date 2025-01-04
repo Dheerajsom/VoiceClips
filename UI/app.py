@@ -1,10 +1,18 @@
 import tkinter as tk
 from tkinter import messagebox
+from .widgets import create_button
 
+
+def on_button_click():
+    print("Recording started!")
 
 def run_app():
     root = tk.Tk()
     root.title("Voice Clips")
+   
+
+    # Add the button to the main window
+    create_button(root, "Start Recording", on_button_click)
 
     # Set the window icon using a file path with double backslashes
     root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')
@@ -23,6 +31,7 @@ def run_app():
 
     # Set the position and size of the window
     root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
+
 
 
     root.mainloop()
