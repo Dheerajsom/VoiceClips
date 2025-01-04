@@ -1,7 +1,8 @@
 import tkinter as tk
-from tkinter import Label, Button, Frame
+from tkinter import Label, Button, Frame, Entry
 from PIL import Image, ImageTk
 from .recorder import ScreenRecorder
+import threading
 
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
@@ -25,17 +26,22 @@ def stop_recording():
     global recorder, status_label
     if recorder:
         recorder.stop_recording()
-        status_label.config(text="Recording stopped.")
+        status_label.config(text="Recording stopped.File saved as: "+ recorder.filename)
     else:
         status_label.config(text="No recording in progress.")
 
 def run_app():
-    global video_display_label, status_label
+    global video_display_label, status_label, filename_entry
     root = tk.Tk()
     root.title("VoiceClips")
     root.geometry("1200x700")  # Window size
     root.iconbitmap('C:\\Users\\dheer\\Documents\\VoiceClips\\voiceclipslogo.ico')
 
+    filename_entry = Entry(root, width=50)
+    filename_entry.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+    filename_entry.insert(0, "test_video.mp4")
+
+    
     # Video display label
     video_display_label = Label(root)
     video_display_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
