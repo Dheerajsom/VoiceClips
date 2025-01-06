@@ -83,10 +83,11 @@ def start_recording():
         resolution = tuple(map(int, resolution_var.get().split('x')))
         recorder = ScreenRecorder('test_video.mp4', fps, resolution, on_new_frame=update_video_frame)
         recorder.start_recording_thread(status_label)
-        start_timer()  # added to start the timer
+        recorder.running = True  # Ensures running is set to True
+        start_timer()  # Start the timer after recording starts
     else:
         print("Recording is already in progress.")
-        messagebox.showinfo("Info", "Recording is already in progress.")  # added alert
+        messagebox.showinfo("Info", "Recording is already in progress.")
 
 def stop_recording():
     global recorder, status_label
@@ -172,6 +173,8 @@ def run_app():
     resolution_menu = OptionMenu(control_frame, resolution_var, *resolution_options.keys())
     resolution_menu.config(bg="#505050", fg="white")
     resolution_menu.pack(side=tk.LEFT, padx=5)
+
+
 
     add_scene_btn = Button(control_frame, text="Add Scene", command=add_scene, bg="blue", fg="white")  # added button to add scene
     add_scene_btn.pack(side=tk.LEFT, padx=5)
