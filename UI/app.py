@@ -173,8 +173,18 @@ def run_app():
     resolution_menu.config(bg="#505050", fg="white")
     resolution_menu.pack(side=tk.LEFT, padx=5)
 
+    # Stop button
+    stop_btn = Button(control_frame, text="Stop Recording", command=stop_recording, bg="red", fg="white")
+    stop_btn.pack(side=tk.RIGHT, padx=10)
+
+    # Start button
+    record_btn = Button(control_frame, text="Start Recording", command=start_recording, bg="green", fg="white")
+    record_btn.pack(side=tk.RIGHT, padx=10)
+
+    # Add scene button
     add_scene_btn = Button(control_frame, text="Add Scene", command=add_scene, bg="blue", fg="white")  # added button to add scene
-    add_scene_btn.pack(side=tk.LEFT, padx=5)
+    add_scene_btn.pack(side=tk.LEFT, padx=10)
+
 
     root.after(1000, update_stats)  # System stats updater
     bind_hotkeys()  # Hotkey binding
