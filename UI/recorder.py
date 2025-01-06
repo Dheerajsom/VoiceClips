@@ -9,6 +9,7 @@ import pyaudio
 class ScreenRecorder:
     def __init__(self, filename='output.mp4', fps=60.0, resolution=(1920, 1080), on_new_frame=None):
         self.filename = filename
+        self.audio_output = "monitor.wav"
         self.fps = fps
         self.resolution = resolution
         self.codec = cv2.VideoWriter_fourcc(*'mp4v')
@@ -35,6 +36,7 @@ class ScreenRecorder:
         
         audio_thread = threading.Thread(target=self.record_audio)
         audio_thread.start()
+        print("Audio monitoring enabled...")
 
 
         while self.running:

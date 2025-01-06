@@ -22,3 +22,9 @@ def create_menu(parent, options):
     menu = tk.OptionMenu(parent, StringVar(value=options[0]), *options)
     menu.pack(pady=10)
     return menu
+def create_stream_menu(parent):
+    stream_options = ["YouTube", "Twitch", "Facebook Live", "Custom RTMP"]
+    stream_var = StringVar(value="Select Platform")
+    menu = tk.OptionMenu(parent, stream_var, *stream_options)
+    menu.pack(pady=10)
+    return menu

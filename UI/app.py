@@ -10,7 +10,18 @@ from pynput import keyboard   # added for hotkey support
 
 # added scene management
 scenes = {}  # Store scenes with their respective sources
+sources = {}  # Store available sources for scenes
 current_scene = None  # Track the currently selected scene
+
+
+def add_source(source_type):
+    """Add a new source (e.g., webcam, image, display capture) to the current scene."""
+    global sources, current_scene
+    if current_scene:
+        source_name = f"{source_type} {len(sources) + 1}"
+        sources[source_name] = source_type
+        scenes[current_scene].append(source_name)
+        messagebox.showinfo("Info", f"Added {source_name} to {current_scene}")
 
 def add_scene():
     """Add a new scene."""
@@ -31,6 +42,10 @@ def switch_scene(scene_name):
     global current_scene
     current_scene = scene_name
     status_label.config(text=f"Scene: {scene_name}")
+
+def add_transition_effect(effect_type):
+    """Apply transitions between scenes."""
+    status_label.config(text=f"Transition: {effect_type}")
 
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
@@ -119,7 +134,7 @@ def run_app():
 
     scene_var = StringVar(root)
     scene_var.set("Default")
-    scene_menu = OptionMenu(root, scene_var, [])
+    scene_menu = OptionMenu(root, scene_var, "Scene 1", "Scene 2", "Add New Scene")
     scene_menu.grid()
 
     # Layout organization using grid
