@@ -125,9 +125,6 @@ def run_app():
     root.geometry("1200x800")
     root.configure(bg="#2E2E2E")  # Modern dark background
 
-    start_img = load_image('/Users/sreekarravavarapu/VoiceClips/start button.jpg', max_size=(60, 60))
-    stop_img = load_image('/Users/sreekarravavarapu/VoiceClips/stop.jpg', max_size=(60, 60))
-
     frame_rate_var = StringVar(root, "60.0")
     resolution_var = StringVar(root, "1920x1080")
     resolution_options = {"1920x1080": "1920x1080", "1280x720": "1280x720", "640x480": "640x480"}
@@ -175,14 +172,6 @@ def run_app():
     resolution_menu = OptionMenu(control_frame, resolution_var, *resolution_options.keys())
     resolution_menu.config(bg="#505050", fg="white")
     resolution_menu.pack(side=tk.LEFT, padx=5)
-
-    start_btn = Button(control_frame, image=start_img, command=start_recording, bg="green", highlightthickness=0)
-    start_btn.image = start_img
-    start_btn.pack(side=tk.LEFT, padx=5)
-
-    stop_btn = Button(control_frame, image=stop_img, command=stop_recording, bg="red", highlightthickness=0)
-    stop_btn.image = stop_img
-    stop_btn.pack(side=tk.LEFT, padx=5)
 
     add_scene_btn = Button(control_frame, text="Add Scene", command=add_scene, bg="blue", fg="white")  # added button to add scene
     add_scene_btn.pack(side=tk.LEFT, padx=5)
