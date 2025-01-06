@@ -6,6 +6,7 @@ import threading
 import psutil  # added for system stats display
 from datetime import timedelta  # added for recording timer
 from pynput import keyboard   # added for hotkey support
+from datetime import datetime
 
 
 # added scene management
@@ -77,25 +78,29 @@ def update_timer():  # added for timer updates
         timer_label.after(1000, update_timer)
 
 def start_recording():
-    global recorder, status_label, frame_rate_var, resolution_var
+    global recorder, status_label
     if not recorder or not recorder.running:
+        # Create filename with current date and time
+        from datetime import datetime
+        current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"recording_{current_time}.mp4"
+
         fps = float(frame_rate_var.get())
         resolution = tuple(map(int, resolution_var.get().split('x')))
-        recorder = ScreenRecorder('test_video.mp4', fps, resolution, on_new_frame=update_video_frame)
-        recorder.start_recording_thread(status_label)
-        recorder.running = True  # Ensures running is set to True
-        start_timer()  # Start the timer after recording starts
-    else:
-        print("Recording is already in progress.")
-        messagebox.showinfo("Info", "Recording is already in progress.")
+        recorder = ScreenRecorder(filename, fps, resolution)
+
+        # Start recording in a separate thread
+        recording_thread = threading.Thread(target=recorder.start_recording, daemon=True)
+        recording_thread.start()
+        status_label.config(text="Status: Recording...")
+        start_timer()  # Start the timer
 
 def stop_recording():
     global recorder, status_label
-    if recorder:
+    if recorder and recorder.running:
         recorder.stop_recording()
-        status_label.config(text="Recording stopped. File saved as: "+ recorder.filename)
-    else:
-        status_label.config(text="No recording in progress.")
+        status_label.config(text=f"Recording stopped. File saved as {recorder.filename.replace('.mp4', '_final.mp4')}")
+
 
 def update_stats():  # added for system stats
     global fps_label
