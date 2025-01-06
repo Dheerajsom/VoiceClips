@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import Label, Button, Frame, OptionMenu, StringVar
+from tkinter import Label, Button, Frame, OptionMenu, StringVar, Scale, Checkbutton, BooleanVar, filedialog
+from tkinter.ttk import Separator
 from PIL import Image, ImageTk
 from .recorder import ScreenRecorder
 import threading
@@ -10,7 +11,6 @@ from datetime import datetime
 import time
 import cv2
 import os
-import sys
 
 # Create recordings directory (absolute path)
 RECORDINGS_DIR = os.path.join(os.path.abspath(os.getcwd()), 'recordings')
@@ -19,6 +19,10 @@ os.makedirs(RECORDINGS_DIR, exist_ok=True)
 scenes = {}
 sources = {}
 current_scene = None
+
+# Initialize performance stats variables
+frames_count = 0
+last_frame_time = time.time()
 
 def resize_frame_to_fit(frame, max_width, max_height):
     height, width = frame.shape[:2]
@@ -61,7 +65,6 @@ def update_stats():
         fps_label.config(text=f"FPS: {actual_fps:.1f} | CPU: {cpu_usage}%")
         fps_label.after(1000, update_stats)
 
-
 def start_recording():
     global recorder, status_label
     if not recorder or not recorder.running:
@@ -81,12 +84,34 @@ def start_recording():
         status_label.config(text="Status: Recording...")
         start_timer()
 
-def stop_recording():
+def stop_recording(stop_btn):
     global recorder, status_label
     if recorder and recorder.running:
-        recorder.running = False  # Signal the recording thread to stop
-        recorder.stop_recording()
-        status_label.config(text="Status: Stopped Recording. Video saved at: {recorder.filename}")
+        stop_btn.config(state="disabled")  # Disable the stop button to prevent multiple clicks
+
+        try:
+            recorder.running = False
+            recorder.stop_recording()
+        except Exception as e:
+            print(f"Error during stop recording: {e}")
+            status_label.config(text="Status: Error stopping recording.")
+            stop_btn.config(state="normal")
+            return
+
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".mp4",
+            filetypes=[("MP4 files", "*.mp4"), ("MKV files", "*.mkv"), ("MOV files", "*.mov")],
+            title="Save Recording As"
+        )
+
+        if save_path:
+            recorder.filename = save_path
+            print(f"Recording saved as {save_path}")
+            status_label.config(text=f"Status: Stopped Recording. Saved at: {save_path}")
+        else:
+            status_label.config(text="Status: Recording stopped without saving.")
+
+        stop_btn.config(state="normal")
         timer_label.config(text="Duration: 00:00:00")
 
 def bind_hotkeys():
@@ -103,62 +128,63 @@ def bind_hotkeys():
     hotkeys.start()
 
 def run_app():
-    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, video_frame, recorder, seconds
+    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, video_frame, recorder, seconds, desktop_audio_var, mic_audio_var
     root = tk.Tk()
     root.title("VoiceClips")
-    root.geometry("1920x1080")
+    root.geometry("1600x900")
     root.configure(bg="#2E2E2E")
+
+    # Configure weights for layout
+    root.grid_rowconfigure(0, weight=1, minsize=450)  # Video frame row
+    root.grid_rowconfigure(1, weight=1, minsize=450)  # Control panel row
+    root.grid_columnconfigure(0, weight=1)
 
     recorder = None
     seconds = 0
 
     frame_rate_var = StringVar(root, "30.0")
-    resolution_var = StringVar(root, "1920x1080")
-    resolution_options = {"1920x1080": "1920x1080", "1280x720": "1280x720", "640x480": "640x480"}
+    resolution_var = StringVar(root, "1280x720")
+    resolution_options = ["1920x1080", "1280x720", "640x480"]
 
-    main_frame = Frame(root, bg="#2E2E2E")
-    main_frame.pack(fill=tk.BOTH, expand=True)
-
-    video_frame = Frame(main_frame, bg="black")
-    video_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    # Video Display Frame
+    video_frame = Frame(root, bg="black")
+    video_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
     video_display_label = Label(video_frame, bg="black")
     video_display_label.pack(fill=tk.BOTH, expand=True)
 
-    control_frame = Frame(main_frame, bg="#404040")
-    control_frame.pack(fill=tk.X, padx=10, pady=5)
+    # Control Panel Frame
+    control_frame = Frame(root, bg="#404040")
+    control_frame.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
 
-    left_controls = Frame(control_frame, bg="#404040")
-    left_controls.pack(side=tk.LEFT, fill=tk.Y, padx=5)
+    # === Performance Stats (FPS/CPU and Timer) ===
+    Label(control_frame, text="Performance Stats:", bg="#404040", fg="white").grid(row=0, column=0, columnspan=4, padx=5, pady=5)
+    fps_label = Label(control_frame, text="FPS: 0 | CPU: 0%", bg="#404040", fg="white")
+    fps_label.grid(row=1, column=0, padx=5)
 
-    fps_label = Label(left_controls, text="FPS: 0 | CPU: 0%", bg="#404040", fg="white")
-    fps_label.pack(side=tk.LEFT, padx=5)
+    timer_label = Label(control_frame, text="Duration: 00:00:00", bg="#404040", fg="white")
+    timer_label.grid(row=1, column=1, padx=5)
 
-    timer_label = Label(left_controls, text="Duration: 00:00:00", bg="#404040", fg="white")
-    timer_label.pack(side=tk.LEFT, padx=5)
+    # === Recording Controls ===
+    Label(control_frame, text="Recording Controls:", bg="#404040", fg="white").grid(row=2, column=0, columnspan=4, padx=5, pady=5)
+    record_btn = Button(control_frame, text="Start Recording", command=start_recording, bg="green", fg="white")
+    record_btn.grid(row=3, column=0, padx=5, pady=5)
 
-    center_controls = Frame(control_frame, bg="#404040")
-    center_controls.pack(side=tk.LEFT, fill=tk.Y, expand=True)
+    stop_btn = Button(control_frame, text="Stop Recording", command=lambda: stop_recording(stop_btn), bg="red", fg="white")
+    stop_btn.grid(row=3, column=1, padx=5, pady=5)
 
-    frame_rate_entry = OptionMenu(center_controls, frame_rate_var, "30.0", "60.0")
-    frame_rate_entry.config(bg="#505050", fg="white")
-    frame_rate_entry.pack(side=tk.LEFT, padx=5)
+    # === Stream Settings ===
+    Label(control_frame, text="Streaming Platform:", bg="#404040", fg="white").grid(row=8, column=0, padx=5)
+    stream_options = ["YouTube", "Twitch", "Facebook Live", "Custom RTMP"]
+    stream_var = StringVar(root, value="Select Platform")
+    OptionMenu(control_frame, stream_var, *stream_options).grid(row=8, column=1)
 
-    resolution_menu = OptionMenu(center_controls, resolution_var, *resolution_options.keys())
-    resolution_menu.config(bg="#505050", fg="white")
-    resolution_menu.pack(side=tk.LEFT, padx=5)
+    Button(control_frame, text="Start Stream", command=lambda: print(f"Start Stream on {stream_var.get()}")).grid(row=8, column=2)
+    Button(control_frame, text="Stop Stream", command=lambda: print("Stop Stream")).grid(row=8, column=3)
 
-    right_controls = Frame(control_frame, bg="#404040")
-    right_controls.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
-
-    stop_btn = Button(right_controls, text="Stop Recording", command=stop_recording, bg="red", fg="white")
-    stop_btn.pack(side=tk.RIGHT, padx=5)
-
-    record_btn = Button(right_controls, text="Start Recording", command=start_recording, bg="green", fg="white")
-    record_btn.pack(side=tk.RIGHT, padx=5)
-
-    status_label = Label(main_frame, text="Status: Ready", anchor="w", bg="#2E2E2E", fg="white")
-    status_label.pack(fill=tk.X, padx=10, pady=5)
+    # === Status Bar ===
+    status_label = Label(control_frame, text="Status: Ready", bg="#2E2E2E", fg="white", anchor="w")
+    status_label.grid(row=9, column=0, columnspan=4, padx=10, pady=5, sticky="ew")
 
     root.after(1000, update_stats)
     bind_hotkeys()
