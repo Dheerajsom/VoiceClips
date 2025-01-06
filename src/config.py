@@ -1,5 +1,3 @@
-# Configuration settings for the application
-
 AUDIO_SETTINGS = {
     'sample_rate': 44100,
     'chunk_size': 1024,

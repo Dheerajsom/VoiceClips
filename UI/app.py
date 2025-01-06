@@ -7,6 +7,7 @@ import psutil
 from datetime import timedelta
 from pynput import keyboard
 from datetime import datetime
+import time
 import cv2
 import os
 import sys
@@ -48,12 +49,18 @@ def update_timer():
         timer_label.after(1000, update_timer)
 
 def update_stats():
-    global fps_label
+    global fps_label, last_frame_time, frames_count
     if recorder and recorder.running:
-        fps = frame_rate_var.get()
+        current_time = time.time()
+        frames_count += 1
+        if current_time - last_frame_time >= 1:
+            actual_fps = frames_count / (current_time - last_frame_time)
+            frames_count = 0
+            last_frame_time = current_time
         cpu_usage = psutil.cpu_percent()
-        fps_label.config(text=f"FPS: {fps} | CPU: {cpu_usage}%")
+        fps_label.config(text=f"FPS: {actual_fps:.1f} | CPU: {cpu_usage}%")
         fps_label.after(1000, update_stats)
+
 
 def start_recording():
     global recorder, status_label
@@ -79,7 +86,7 @@ def stop_recording():
     if recorder and recorder.running:
         recorder.running = False  # Signal the recording thread to stop
         recorder.stop_recording()
-        status_label.config(text=f"Recording stopped. Saved at: {recorder.filename}")
+        status_label.config(text="Status: Stopped Recording. Video saved at: {recorder.filename}")
         timer_label.config(text="Duration: 00:00:00")
 
 def bind_hotkeys():
