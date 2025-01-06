@@ -1,102 +1,93 @@
 import threading
-import time
 import cv2
 import numpy as np
 import pyautogui
-import wave
 import pyaudio
-from moviepy import VideoFileClip, AudioFileClip
+import wave
+import time
+import os
 
 class ScreenRecorder:
     def __init__(self, filename='output.mp4', fps=30.0, resolution=(1920, 1080)):
         self.filename = filename
-        self.audio_output = "temp_audio.wav"
+        self.temp_dir = os.path.join(os.path.dirname(filename), 'temp')
+        os.makedirs(self.temp_dir, exist_ok=True)
+        
         self.fps = fps
         self.resolution = resolution
-        self.codec = cv2.VideoWriter_fourcc(*'mp4v')
-        self.out = None
         self.running = False
         self.audio_frames = []
 
-        # Initialize PyAudio
         self.audio = pyaudio.PyAudio()
+        self.audio_format = pyaudio.paInt16
+        self.channels = 2
+        self.sample_rate = 44100
+        self.chunk_size = 1024 * 2
+
         try:
-            self.stream = self.audio.open(
-                format=pyaudio.paInt16, channels=1,
-                rate=44100, input=True, frames_per_buffer=1024
+            self.audio_stream = self.audio.open(
+                format=self.audio_format,
+                channels=self.channels,
+                rate=self.sample_rate,
+                input=True,
+                frames_per_buffer=self.chunk_size
             )
-        except OSError as e:
-            print(f"Error: Unable to open audio stream. {e}")
-            self.stream = None
+        except Exception as e:
+            print(f"Error: Unable to open audio stream: {e}")
+            self.audio_stream = None
 
-    def start_recording(self):
-        """Start recording the screen and audio."""
-        self.out = cv2.VideoWriter(self.filename, self.codec, self.fps, self.resolution)
+    def start_recording(self, update_gui_frame_callback=None):
         self.running = True
+        frame_interval = 1.0 / self.fps
 
-        if self.stream:
-            audio_thread = threading.Thread(target=self.record_audio)
-            audio_thread.start()
+        temp_video = os.path.join(self.temp_dir, "temp_video.avi")
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(temp_video, fourcc, self.fps, self.resolution)
 
-        frame_interval = 1.0 / self.fps  # Frame capture interval in seconds
+        def record_audio():
+            while self.running and self.audio_stream:
+                try:
+                    audio_data = self.audio_stream.read(self.chunk_size)
+                    self.audio_frames.append(audio_data)
+                except Exception as e:
+                    print(f"Error recording audio: {e}")
+                    break
 
-        print("Recording started...")
-        while self.running:
-            start_time = time.time()
+        audio_thread = threading.Thread(target=record_audio, daemon=True)
+        audio_thread.start()
 
-            # Capture screen
-            img = pyautogui.screenshot()
-            frame = np.array(img)
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frame = cv2.resize(frame, self.resolution)
-            self.out.write(frame)
+        last_frame_time = time.time()
+        try:
+            while self.running:
+                if time.time() - last_frame_time >= frame_interval:
+                    frame = np.array(pyautogui.screenshot())
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    frame = cv2.resize(frame, self.resolution)
+                    out.write(frame)
+                    if update_gui_frame_callback:
+                        update_gui_frame_callback(frame)
+                    last_frame_time = time.time()
+        finally:
+            self.stop_recording(out, temp_video)
 
-            elapsed_time = time.time() - start_time
-            time.sleep(max(0, frame_interval - elapsed_time))
-
-        self.stop_recording()
-
-    def stop_recording(self):
-        """Stop recording and save video and audio."""
+    def stop_recording(self, video_writer, temp_video):
         self.running = False
-        if self.out:
-            self.out.release()
-
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
+        video_writer.release()
+        if self.audio_stream:
+            self.audio_stream.stop_stream()
+            self.audio_stream.close()
             self.audio.terminate()
-            self.save_audio()
-            self.combine_audio_video()
 
-        print("Recording stopped.")
+        temp_audio = os.path.join(self.temp_dir, "temp_audio.wav")
+        with wave.open(temp_audio, "wb") as wf:
+            wf.setnchannels(self.channels)
+            wf.setsampwidth(self.audio.get_sample_size(self.audio_format))
+            wf.setframerate(self.sample_rate)
+            wf.writeframes(b"".join(self.audio_frames))
 
-    def record_audio(self):
-        """Record audio while capturing video."""
-        while self.running:
-            data = self.stream.read(1024, exception_on_overflow=False)
-            self.audio_frames.append(data)
+        ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k -shortest "{self.filename}" -y'
+        os.system(ffmpeg_cmd)
 
-    def save_audio(self):
-        """Save recorded audio to a .wav file."""
-        with wave.open(self.audio_output, 'wb') as wf:
-            wf.setnchannels(1)
-            wf.setsampwidth(self.audio.get_sample_size(pyaudio.paInt16))
-            wf.setframerate(44100)
-            wf.writeframes(b''.join(self.audio_frames))
-        print(f"Audio saved to {self.audio_output}")
-
-    def combine_audio_video(self):
-        """Combine video and audio into a single .mp4 file."""
-        print("Combining audio and video...")
-        video_clip = VideoFileClip(self.filename)
-        audio_clip = AudioFileClip(self.audio_output)
-
-        # Ensure the audio duration matches the video
-        final_audio = audio_clip.set_duration(video_clip.duration)
-
-        final_clip = video_clip.set_audio(final_audio)
-        final_filename = self.filename.replace(".mp4", "_final.mp4")
-        final_clip.write_videofile(final_filename, codec="libx264", audio_codec="aac")
-        print(f"Final video saved as {final_filename}")
-
+        os.remove(temp_video)
+        os.remove(temp_audio)
+        os.rmdir(self.temp_dir)
