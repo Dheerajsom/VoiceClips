@@ -144,11 +144,11 @@ def run_app():
     right_controls = Frame(control_frame, bg="#404040")
     right_controls.pack(side=tk.RIGHT, fill=tk.Y, padx=5)
 
-    record_btn = Button(right_controls, text="Start Recording", command=start_recording, bg="green", fg="white")
-    record_btn.pack(side=tk.RIGHT, padx=5)
-
     stop_btn = Button(right_controls, text="Stop Recording", command=stop_recording, bg="red", fg="white")
     stop_btn.pack(side=tk.RIGHT, padx=5)
+
+    record_btn = Button(right_controls, text="Start Recording", command=start_recording, bg="green", fg="white")
+    record_btn.pack(side=tk.RIGHT, padx=5)
 
     status_label = Label(main_frame, text="Status: Ready", anchor="w", bg="#2E2E2E", fg="white")
     status_label.pack(fill=tk.X, padx=10, pady=5)
