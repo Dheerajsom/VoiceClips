@@ -7,6 +7,31 @@ import psutil  # added for system stats display
 from datetime import timedelta  # added for recording timer
 from pynput import keyboard   # added for hotkey support
 
+
+# added scene management
+scenes = {}  # Store scenes with their respective sources
+current_scene = None  # Track the currently selected scene
+
+def add_scene():
+    """Add a new scene."""
+    global scenes, current_scene
+    scene_name = f"Scene {len(scenes) + 1}"
+    scenes[scene_name] = []
+    scene_var.set(scene_name)
+    update_scene_list()
+
+def update_scene_list():
+    """Update the scene dropdown menu."""
+    scene_menu["menu"].delete(0, "end")
+    for scene_name in scenes.keys():
+        scene_menu["menu"].add_command(label=scene_name, command=lambda value=scene_name: switch_scene(value))
+
+def switch_scene(scene_name):
+    """Switch to the selected scene."""
+    global current_scene
+    current_scene = scene_name
+    status_label.config(text=f"Scene: {scene_name}")
+
 def update_video_frame(frame):
     """Update the GUI with new video frames."""
     global video_display_label
@@ -79,7 +104,7 @@ def bind_hotkeys():
     hotkeys.start()
 
 def run_app():
-    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label
+    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, scene_var, scene_menu
     root = tk.Tk()
     root.title("VoiceClips")
     root.geometry("1200x800")
@@ -92,9 +117,15 @@ def run_app():
     resolution_var = StringVar(root, "1920x1080")
     resolution_options = {"1920x1080": "1920x1080", "1280x720": "1280x720", "640x480": "640x480"}
 
+    scene_var = StringVar(root)
+    scene_var.set("Default")
+    scene_menu = OptionMenu(root, scene_var, [])
+    scene_menu.grid()
+
     # Layout organization using grid
     main_frame = Frame(root, bg="#2E2E2E")
     main_frame.grid(row=0, column=0, sticky="nsew")
+
     root.grid_rowconfigure(0, weight=1)
     root.grid_columnconfigure(0, weight=1)
 
@@ -137,6 +168,9 @@ def run_app():
     stop_btn = Button(control_frame, image=stop_img, command=stop_recording, bg="red", highlightthickness=0)
     stop_btn.image = stop_img
     stop_btn.pack(side=tk.LEFT, padx=5)
+
+    add_scene_btn = Button(control_frame, text="Add Scene", command=add_scene, bg="blue", fg="white")  # added button to add scene
+    add_scene_btn.pack(side=tk.LEFT)
 
     root.after(1000, update_stats)  # System stats updater
     bind_hotkeys()  # Hotkey binding
