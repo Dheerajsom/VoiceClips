@@ -123,7 +123,7 @@ def run_app():
     global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, scene_var, scene_menu
     root = tk.Tk()
     root.title("VoiceClips")
-    root.geometry("1200x800")
+    root.geometry("1920x1080")
     root.configure(bg="#2E2E2E")  # Modern dark background
 
     frame_rate_var = StringVar(root, "60.0")
