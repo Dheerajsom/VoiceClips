@@ -84,20 +84,10 @@ def start_recording():
         status_label.config(text="Status: Recording...")
         start_timer()
 
-def stop_recording(stop_btn):
+def stop_recording():
     global recorder, status_label
     if recorder and recorder.running:
-        stop_btn.config(state="disabled")  # Disable the stop button to prevent multiple clicks
-
-        try:
-            recorder.running = False
-            recorder.stop_recording()
-        except Exception as e:
-            print(f"Error during stop recording: {e}")
-            status_label.config(text="Status: Error stopping recording.")
-            stop_btn.config(state="normal")
-            return
-
+        # Open save file dialog for the user to choose the save location
         save_path = filedialog.asksaveasfilename(
             defaultextension=".mp4",
             filetypes=[("MP4 files", "*.mp4"), ("MKV files", "*.mkv"), ("MOV files", "*.mov")],
@@ -105,13 +95,12 @@ def stop_recording(stop_btn):
         )
 
         if save_path:
-            recorder.filename = save_path
-            print(f"Recording saved as {save_path}")
+            recorder.filename = save_path  # Set the filename to the selected path
+            recorder.stop_recording()  # Stop and save the recording
             status_label.config(text=f"Status: Stopped Recording. Saved at: {save_path}")
         else:
             status_label.config(text="Status: Recording stopped without saving.")
 
-        stop_btn.config(state="normal")
         timer_label.config(text="Duration: 00:00:00")
 
 def bind_hotkeys():
@@ -170,7 +159,7 @@ def run_app():
     record_btn = Button(control_frame, text="Start Recording", command=start_recording, bg="green", fg="white")
     record_btn.grid(row=3, column=0, padx=5, pady=5)
 
-    stop_btn = Button(control_frame, text="Stop Recording", command=lambda: stop_recording(stop_btn), bg="red", fg="white")
+    stop_btn = Button(control_frame, text="Stop Recording", command=stop_recording, bg="red", fg="white")
     stop_btn.grid(row=3, column=1, padx=5, pady=5)
 
     # === Stream Settings ===

@@ -1,12 +1,12 @@
 import threading
 import cv2
 import numpy as np
+import pyautogui
 import pyaudio
 import wave
 import time
 import os
 import shutil
-import mss
 
 class ScreenRecorder:
     def __init__(self, filename='output.mp4', fps=30.0, resolution=(1920, 1080)):
@@ -18,11 +18,10 @@ class ScreenRecorder:
         self.resolution = resolution
         self.running = False
         self.audio_frames = []
-        self.video_writer = None
 
         self.audio = pyaudio.PyAudio()
         self.audio_format = pyaudio.paInt16
-        self.channels = 1  # Mono audio for compatibility
+        self.channels = 1  # Mono audio for better compatibility
         self.sample_rate = 44100
         self.chunk_size = 1024 * 2
 
@@ -44,7 +43,7 @@ class ScreenRecorder:
 
         temp_video = os.path.join(self.temp_dir, "temp_video.avi")
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        self.video_writer = cv2.VideoWriter(temp_video, fourcc, self.fps, self.resolution)
+        out = cv2.VideoWriter(temp_video, fourcc, self.fps, self.resolution)
 
         def record_audio():
             while self.running and self.audio_stream:
@@ -58,42 +57,29 @@ class ScreenRecorder:
         audio_thread = threading.Thread(target=record_audio, daemon=True)
         audio_thread.start()
 
-        with mss.mss() as sct:  # Use mss for faster screen capture
-            monitor = {"top": 0, "left": 0, "width": self.resolution[0], "height": self.resolution[1]}
-            try:
-                while self.running:
-                    start_time = time.time()
-                    frame = np.array(sct.grab(monitor))
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+        last_frame_time = time.time()
+        try:
+            while self.running:
+                if time.time() - last_frame_time >= frame_interval:
+                    frame = np.array(pyautogui.screenshot())
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame = cv2.resize(frame, self.resolution)
-                    self.video_writer.write(frame)
+                    out.write(frame)
                     if update_gui_frame_callback:
                         update_gui_frame_callback(frame)
+                    last_frame_time = time.time()
+        finally:
+            self.stop_recording(out, temp_video)
 
-                    # Sleep to maintain frame capture rate
-                    elapsed_time = time.time() - start_time
-                    sleep_time = max(0, frame_interval - elapsed_time)
-                    time.sleep(sleep_time)
-            finally:
-                if self.video_writer:
-                    self.video_writer.release()  # Ensure video_writer is released
-                self.stop_recording()
-
-    def stop_recording(self):
-        if not self.running:
-            return
-
+    def stop_recording(self, video_writer=None, temp_video=None):
         self.running = False
-
-        if self.video_writer is not None:
-            self.video_writer.release()
+        video_writer.release()
 
         if self.audio_stream:
             self.audio_stream.stop_stream()
             self.audio_stream.close()
             self.audio.terminate()
 
-        temp_video = os.path.join(self.temp_dir, "temp_video.avi")
         temp_audio = os.path.join(self.temp_dir, "temp_audio.wav")
         with wave.open(temp_audio, "wb") as wf:
             wf.setnchannels(self.channels)
@@ -101,11 +87,13 @@ class ScreenRecorder:
             wf.setframerate(self.sample_rate)
             wf.writeframes(b"".join(self.audio_frames))
 
+        # Detect file extension
         file_extension = os.path.splitext(self.filename)[-1].lower()
+
         try:
             if file_extension == ".mov":
-                # MOV: Use compatible codecs
-                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac "{self.filename}" -y'
+                # MOV: Use H.264 (compatible codec)
+                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -strict experimental "{self.filename}" -y'
             elif file_extension == ".mkv":
                 # MKV: Standard H.264/AAC encoding
                 ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -preset medium -crf 23 "{self.filename}" -y'
@@ -123,11 +111,13 @@ class ScreenRecorder:
 
         except Exception as e:
             print(f"Error saving {file_extension.upper()} file: {e}")
+            # Fallback to MP4 if another format fails
             fallback_filename = self.filename.replace(file_extension, ".mp4")
             ffmpeg_cmd_fallback = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac "{fallback_filename}" -y'
             os.system(ffmpeg_cmd_fallback)
             print(f"Fallback: Saved as MP4 at {fallback_filename}")
 
+        # Clean up temporary files after ffmpeg completes
         try:
             os.remove(temp_video)
             os.remove(temp_audio)
