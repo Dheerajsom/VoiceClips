@@ -9,7 +9,7 @@ import os
 import shutil
 
 class ScreenRecorder:
-    def __init__(self, filename='output.mp4', fps=30.0, resolution=(1920, 1080)):
+    def __init__(self, filename='output.mp4', fps=60.0, resolution=(1920, 1080)):
         self.filename = filename
         self.temp_dir = os.path.join(os.path.dirname(filename), 'temp')
         os.makedirs(self.temp_dir, exist_ok=True)
@@ -41,7 +41,7 @@ class ScreenRecorder:
         self.running = True
         frame_interval = 1.0 / self.fps
         self.frame_interval = frame_interval
-        
+
         temp_video = os.path.join(self.temp_dir, "temp_video.avi")
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(temp_video, fourcc, self.fps, self.resolution)
