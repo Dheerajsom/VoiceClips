@@ -125,7 +125,7 @@ def run_app():
 
     # Configure weights for layout
     root.grid_rowconfigure(0, weight=1, minsize=450)  # Video frame row
-    root.grid_rowconfigure(1, weight=1, minsize=450)  # Control panel row
+    root.grid_rowconfigure(1, weight=1, minsize=250)  # Control panel row
     root.grid_columnconfigure(0, weight=1)
 
     recorder = None
