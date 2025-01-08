@@ -40,7 +40,8 @@ class ScreenRecorder:
     def start_recording(self, update_gui_frame_callback=None):
         self.running = True
         frame_interval = 1.0 / self.fps
-
+        self.frame_interval = frame_interval
+        
         temp_video = os.path.join(self.temp_dir, "temp_video.avi")
         fourcc = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(temp_video, fourcc, self.fps, self.resolution)
@@ -57,17 +58,20 @@ class ScreenRecorder:
         audio_thread = threading.Thread(target=record_audio, daemon=True)
         audio_thread.start()
 
+
         last_frame_time = time.time()
+
         try:
             while self.running:
-                if time.time() - last_frame_time >= frame_interval:
+                current_time = time.time()
+                if current_time - last_frame_time >= self.frame_interval:
                     frame = np.array(pyautogui.screenshot())
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame = cv2.resize(frame, self.resolution)
                     out.write(frame)
                     if update_gui_frame_callback:
                         update_gui_frame_callback(frame)
-                    last_frame_time = time.time()
+                    last_frame_time += self.frame_interval
         finally:
             self.stop_recording(out, temp_video)
 
