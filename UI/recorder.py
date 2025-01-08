@@ -9,7 +9,7 @@ import os
 import shutil
 
 class ScreenRecorder:
-    def __init__(self, filename='output.mp4', fps=30.0, resolution=(1920, 1080)):
+    def __init__(self, filename='output.mp4', fps=60.0, resolution=(1920, 1080)):
         self.filename = filename
         self.temp_dir = os.path.join(os.path.dirname(filename), 'temp')
         os.makedirs(self.temp_dir, exist_ok=True)
@@ -71,7 +71,7 @@ class ScreenRecorder:
                     out.write(frame)
                     if update_gui_frame_callback:
                         update_gui_frame_callback(frame)
-                    last_frame_time += self.frame_interval
+                    last_frame_time = current_time
         finally:
             self.stop_recording(out, temp_video)
 
@@ -96,14 +96,14 @@ class ScreenRecorder:
 
         try:
             if file_extension == ".mov":
-                # MOV: Use H.264 (compatible codec)
-                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -strict experimental "{self.filename}" -y'
+            # MOV: Use H.264 (compatible codec)
+                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -async 1 -shortest "{self.filename}" -y'
             elif file_extension == ".mkv":
-                # MKV: Standard H.264/AAC encoding
-                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -preset medium -crf 23 "{self.filename}" -y'
+        # MKV: Standard H.264/AAC encoding
+                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -preset medium -crf 23 -async 1 -shortest "{self.filename}" -y'
             else:
-                # MP4 or Default encoding
-                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -b:a 192k -shortest "{self.filename}" -y'
+        # MP4 or Default encoding
+                ffmpeg_cmd = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -b:a 192k -async 1 -shortest "{self.filename}" -y'
 
             print(f"Running ffmpeg command:\n{ffmpeg_cmd}")
             exit_code = os.system(ffmpeg_cmd)
@@ -117,9 +117,10 @@ class ScreenRecorder:
             print(f"Error saving {file_extension.upper()} file: {e}")
             # Fallback to MP4 if another format fails
             fallback_filename = self.filename.replace(file_extension, ".mp4")
-            ffmpeg_cmd_fallback = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac "{fallback_filename}" -y'
+            ffmpeg_cmd_fallback = f'ffmpeg -i "{temp_video}" -i "{temp_audio}" -c:v libx264 -c:a aac -async 1 "{fallback_filename}" -y'
             os.system(ffmpeg_cmd_fallback)
             print(f"Fallback: Saved as MP4 at {fallback_filename}")
+
 
         # Clean up temporary files after ffmpeg completes
         try:
