@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import Label, Button, Frame, OptionMenu, StringVar, Scale, Checkbutton, BooleanVar, filedialog
+from tkinter import Label, Button, Frame, OptionMenu, StringVar, filedialog
 from tkinter.ttk import Separator
 from PIL import Image, ImageTk
 from .recorder import ScreenRecorder
@@ -24,11 +24,13 @@ current_scene = None
 frames_count = 0
 last_frame_time = time.time()
 
+
 def resize_frame_to_fit(frame, max_width, max_height):
     height, width = frame.shape[:2]
-    ratio = min(max_width/width, max_height/height)
+    ratio = min(max_width / width, max_height / height)
     new_size = (int(width * ratio), int(height * ratio))
     return cv2.resize(frame, new_size)
+
 
 def update_video_frame(frame):
     global video_display_label
@@ -40,10 +42,12 @@ def update_video_frame(frame):
     video_display_label.config(image=photo)
     video_display_label.image = photo
 
+
 def start_timer():
     global seconds
     seconds = 0
     update_timer()
+
 
 def update_timer():
     global seconds, timer_label
@@ -51,6 +55,7 @@ def update_timer():
         seconds += 1
         timer_label.config(text=f"Duration: {str(timedelta(seconds=seconds))}")
         timer_label.after(1000, update_timer)
+
 
 def update_stats():
     global fps_label, last_frame_time, frames_count
@@ -65,16 +70,17 @@ def update_stats():
         fps_label.config(text=f"FPS: {actual_fps:.1f} | CPU: {cpu_usage}%")
         fps_label.after(1000, update_stats)
 
+
 def start_recording():
     global recorder, status_label
     if not recorder or not recorder.running:
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = os.path.join(RECORDINGS_DIR, f"recording_{current_time}.mp4")
-        
+
         fps = float(frame_rate_var.get())
         resolution = tuple(map(int, resolution_var.get().split('x')))
         recorder = ScreenRecorder(filename, fps, resolution)
-        
+
         recording_thread = threading.Thread(
             target=recorder.start_recording,
             args=(update_video_frame,),
@@ -83,6 +89,7 @@ def start_recording():
         recording_thread.start()
         status_label.config(text="Status: Recording...")
         start_timer()
+
 
 def stop_recording():
     global recorder, status_label
@@ -103,6 +110,7 @@ def stop_recording():
 
         timer_label.config(text="Duration: 00:00:00")
 
+
 def bind_hotkeys():
     def on_activate_start():
         start_recording()
@@ -116,8 +124,9 @@ def bind_hotkeys():
     })
     hotkeys.start()
 
+
 def run_app():
-    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, video_frame, recorder, seconds, desktop_audio_var, mic_audio_var
+    global video_display_label, status_label, frame_rate_var, resolution_var, timer_label, fps_label, video_frame, recorder, seconds
     root = tk.Tk()
     root.title("VoiceClips")
     root.geometry("1600x900")
