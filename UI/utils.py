@@ -36,33 +36,20 @@ def list_available_audio_devices():
     system = platform.system()
     audio_devices = []
 
-    if system == "Darwin":  # macOS
-        try:
-            result = subprocess.run(["ffmpeg", "-hide_banner", "-f", "avfoundation", "-list_devices", "true", "-i", ""],
-                                    stderr=subprocess.PIPE, text=True)
-            for line in result.stderr.split("\n"):
-                if """[AVFoundation""" in line and "audio" in line.lower():
-                    audio_devices.append(line.strip().split('[')[-1].split(']')[0])
-        except Exception as e:
-            audio_devices.append("Error listing audio devices")
-
-    elif system == "Linux":  # Linux using `pactl`
-        try:
-            result = subprocess.run(["pactl", "list", "short", "sources"], stdout=subprocess.PIPE, text=True)
-            for line in result.stdout.split("\n"):
-                if "RUNNING" in line:
-                    audio_devices.append(line.split()[1])
-        except Exception as e:
-            audio_devices.append("Error listing audio devices")
-
-    elif system == "Windows":  # Windows using `ffmpeg` with `dshow`
+    if system == "Windows":
         try:
             result = subprocess.run(["ffmpeg", "-list_devices", "true", "-f", "dshow", "-i", "dummy"],
                                     stderr=subprocess.PIPE, text=True)
             for line in result.stderr.split("\n"):
                 if "DirectShow audio" in line:
-                    audio_devices.append(line.strip().split('"')[1])
-        except Exception as e:
-            audio_devices.append("Error listing audio devices")
+                    audio_device = line.split('"')[1]
+                    audio_devices.append(audio_device)
+        except Exception:
+            pass
 
-    return audio_devices if audio_devices else ["No audio devices found"]
+    if not audio_devices:
+        print("No audio devices found. Proceeding with silent audio fallback.")
+        audio_devices.append("None")
+
+    return audio_devices
+    
