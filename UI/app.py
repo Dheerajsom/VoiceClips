@@ -57,6 +57,25 @@ class ScreenRecorderApp:
         self.format_menu = tk.OptionMenu(self.control_frame, self.format_var, *ACCEPTABLE_FILE_EXTENSIONS)
         self.format_menu.pack(pady=5)
 
+        # Audio Device Selection
+        self.audio_devices = list_available_audio_devices()
+
+        # Microphone Selection
+        self.mic_label = tk.Label(self.control_frame, text="Select Microphone:")
+        self.mic_label.pack()
+        self.mic_var = tk.StringVar(value="None")
+        self.mic_menu = tk.OptionMenu(self.control_frame, self.mic_var, *self.audio_devices)
+        self.mic_menu.pack(pady=5)
+
+        # Speaker Selection
+        self.speaker_label = tk.Label(self.control_frame, text="Select Speaker:")
+        self.speaker_label.pack()
+        self.speaker_var = tk.StringVar(value="None")
+        self.speaker_menu = tk.OptionMenu(self.control_frame, self.speaker_var, *self.audio_devices)
+        self.speaker_menu.pack(pady=5)
+
+        
+
         self.source_label = tk.Label(self.control_frame, text="Source Type (leave blank for full screen):")
         self.source_label.pack()
         self.source_entry = tk.Entry(self.control_frame)
