@@ -1,87 +1,123 @@
+# app.py - Screen Recorder with Settings Button in Control Panel
+
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
 import subprocess
 from PIL import Image, ImageTk
 import mss
-import time  # Import for timer
+import time
 from recorder import video_capture_command
-from constants import DEFAULT_FPS, ACCEPTABLE_FILE_EXTENSIONS
+from constants import DEFAULT_FPS, ACCEPTABLE_FILE_EXTENSIONS, BASE_CANVAS_RESOLUTION, OUTPUT_SCALED_RESOLUTION, VIDEO_FILTERS
 from utils import get_desktop_resolution, list_available_audio_devices
+import settings_window
 
 class ScreenRecorderApp:
     def __init__(self, master):
         self.master = master
-        self.master.title("Advanced Screen Recorder")
+        self.master.title("Advanced Screen Recorder with Full Features")
         self.recording_process = None
         self.screen_capture_active = False
         self.sources = []
+        self.audio_devices = list_available_audio_devices() if list_available_audio_devices() else ["No devices found"]
+        self.settings = {
+            "General": {"language": "English", "theme": "Dark"},
+            "Stream": {"stream_key": "", "platform": "YouTube"},
+            "Output": {"recording_path": "", "output_format": "MP4"},
+            "Audio": {"desktop_audio_device": "Default", "mic_audio_device": "Default"},
+            "Video": {"canvas_resolution": "1920x1080", "output_resolution": "1280x720", "fps": "30"},
+            "Hotkeys": {"recording_hotkey": "Ctrl+R"},
+            "Advanced": {"priority": "Normal", "portable_mode": False}
+        }
 
-        # Scene Manager
-        self.scene_frame = tk.Frame(master, bg="#222")
-        self.scene_frame.pack(side=tk.LEFT, fill=tk.Y)
-        self.add_source_button = tk.Button(self.scene_frame, text="Add Source", command=self.add_source)
-        self.add_source_button.pack(pady=5)
+        self.top_half_frame = tk.Frame(master)
+        self.top_half_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Preview and Controls
-        self.main_frame = tk.Frame(master)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
+        self.bottom_half_frame = tk.Frame(master, bg="#2c2f33")
+        self.bottom_half_frame.pack(fill=tk.BOTH, expand=False)
 
-        self.preview_frame = tk.Frame(self.main_frame, width=640, height=480)
-        self.preview_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.preview_label = tk.Label(self.top_half_frame, text="Preview", font=("Helvetica", 16), bg="#444", fg="#fff")
+        self.preview_label.pack(fill=tk.X, pady=5)
+
+        self.preview_frame = tk.Frame(self.top_half_frame, bg="black", height=360)
+        self.preview_frame.pack(fill=tk.BOTH, expand=True)
         self.video_canvas = tk.Label(self.preview_frame, bg="black")
         self.video_canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.control_frame = tk.Frame(self.main_frame)
-        self.control_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10, pady=10)
+        # Control Frame (Bottom Half)
+        self.control_label = tk.Label(self.bottom_half_frame, text="Recording Controls", font=("Helvetica", 16), bg="#333", fg="#fff")
+        self.control_label.grid(row=0, column=0, columnspan=3, pady=10, sticky="nsew")
+        for i in range(3):
+            self.bottom_half_frame.columnconfigure(i, weight=1)
 
-        self.preview_label = tk.Label(self.control_frame, text="Recording Controls", font=("Helvetica", 16))
-        self.preview_label.pack(pady=10)
-
+        self.res_label = tk.Label(self.bottom_half_frame, text="Resolution (WxH):", bg="#2c2f33", fg="#fff")
+        self.res_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.resolution_entry = tk.Entry(self.bottom_half_frame)
         default_width, default_height = get_desktop_resolution()
-        self.res_label = tk.Label(self.control_frame, text="Resolution (WxH):")
-        self.res_label.pack()
-        self.resolution_entry = tk.Entry(self.control_frame)
         self.resolution_entry.insert(0, f"{default_width}x{default_height}")
-        self.resolution_entry.pack(pady=5)
+        self.resolution_entry.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
 
-        self.fps_label = tk.Label(self.control_frame, text="Frames per Second (FPS):")
-        self.fps_label.pack()
-        self.fps_entry = tk.Entry(self.control_frame)
+        self.fps_label = tk.Label(self.bottom_half_frame, text="FPS:", bg="#2c2f33", fg="#fff")
+        self.fps_label.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        self.fps_entry = tk.Entry(self.bottom_half_frame)
         self.fps_entry.insert(0, str(DEFAULT_FPS))
-        self.fps_entry.pack(pady=5)
+        self.fps_entry.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
 
-        self.format_label = tk.Label(self.control_frame, text="Save Format:")
-        self.format_label.pack()
+        self.format_label = tk.Label(self.bottom_half_frame, text="Save Format:", bg="#2c2f33", fg="#fff")
+        self.format_label.grid(row=3, column=0, padx=10, pady=5, sticky="w")
         self.format_var = tk.StringVar(value="mp4")
-        self.format_menu = tk.OptionMenu(self.control_frame, self.format_var, *ACCEPTABLE_FILE_EXTENSIONS)
-        self.format_menu.pack(pady=5)
+        self.format_menu = tk.OptionMenu(self.bottom_half_frame, self.format_var, *ACCEPTABLE_FILE_EXTENSIONS)
+        self.format_menu.grid(row=3, column=1, padx=10, pady=5, sticky="ew")
 
-        self.source_label = tk.Label(self.control_frame, text="Source Type (leave blank for full screen):")
-        self.source_label.pack()
-        self.source_entry = tk.Entry(self.control_frame)
-        self.source_entry.insert(0, "")
-        self.source_entry.pack(pady=5)
+        self.audio_checkbutton = tk.Checkbutton(self.bottom_half_frame, text="Record Audio", bg="#2c2f33", fg="#fff", variable=tk.BooleanVar(value=True))
+        self.audio_checkbutton.grid(row=4, column=0, columnspan=3, pady=5, sticky="w")
 
-        self.audio_checkbox = tk.BooleanVar(value=True)
-        self.audio_checkbutton = tk.Checkbutton(self.control_frame, text="Record Audio", variable=self.audio_checkbox)
-        self.audio_checkbutton.pack(pady=5)
+        self.audio_device_label = tk.Label(self.bottom_half_frame, text="Select Audio Device:", bg="#2c2f33", fg="#fff")
+        self.audio_device_label.grid(row=5, column=0, padx=10, pady=5, sticky="w")
+        self.audio_device_var = tk.StringVar(value=self.audio_devices[0] if self.audio_devices else "None")
+        self.audio_device_menu = tk.OptionMenu(self.bottom_half_frame, self.audio_device_var, *self.audio_devices)
+        self.audio_device_menu.grid(row=5, column=1, padx=10, pady=5, sticky="ew")
 
-        self.start_button = tk.Button(self.control_frame, text="Start Recording", command=self.start_recording)
-        self.start_button.pack(pady=5)
-
-        self.stop_button = tk.Button(self.control_frame, text="Stop Recording", command=self.stop_recording, state="disabled")
-        self.stop_button.pack(pady=5)
-
-        self.transition_label = tk.Label(self.control_frame, text="Transition:")
-        self.transition_label.pack()
+        self.transition_label = tk.Label(self.bottom_half_frame, text="Transition:", bg="#2c2f33", fg="#fff")
+        self.transition_label.grid(row=6, column=0, padx=10, pady=5, sticky="w")
         self.transition_var = tk.StringVar(value="fade")
-        self.transition_menu = tk.OptionMenu(self.control_frame, self.transition_var, "fade", "cut", "slide")
-        self.transition_menu.pack()
+        self.transition_menu = tk.OptionMenu(self.bottom_half_frame, self.transition_var, "fade", "cut", "slide", "stinger")
+        self.transition_menu.grid(row=6, column=1, padx=10, pady=5, sticky="ew")
 
-        # Timer Label for recording time
-        self.record_timer_label = tk.Label(self.control_frame, text="Recording Time: 00:00", font=("Helvetica", 12))
-        self.record_timer_label.pack(pady=5)
+        self.hotkey_label = tk.Label(self.bottom_half_frame, text="Hotkey (Switch Scene):", bg="#2c2f33", fg="#fff")
+        self.hotkey_label.grid(row=7, column=0, padx=10, pady=5, sticky="w")
+        self.hotkey_entry = tk.Entry(self.bottom_half_frame)
+        self.hotkey_entry.grid(row=7, column=1, padx=10, pady=5, sticky="ew")
+
+        self.replay_buffer_label = tk.Label(self.bottom_half_frame, text="Replay Buffer (Seconds):", bg="#2c2f33", fg="#fff")
+        self.replay_buffer_label.grid(row=8, column=0, padx=10, pady=5, sticky="w")
+        self.replay_buffer_entry = tk.Entry(self.bottom_half_frame)
+        self.replay_buffer_entry.insert(0, "10")
+        self.replay_buffer_entry.grid(row=8, column=1, padx=10, pady=5, sticky="ew")
+
+        self.start_button = tk.Button(self.bottom_half_frame, text="Start Recording", command=self.start_recording, bg="#0f0", fg="#000")
+        self.start_button.grid(row=9, column=0, padx=10, pady=10, sticky="ew")
+
+        self.stop_button = tk.Button(self.bottom_half_frame, text="Stop Recording", command=self.stop_recording, state="disabled", bg="#f00", fg="#fff")
+        self.stop_button.grid(row=9, column=1, padx=10, pady=10, sticky="ew")
+
+        # Settings Button at the bottom-right of the control panel
+        self.settings_button = tk.Button(self.bottom_half_frame, text="Open Settings", command=self.open_settings, bg="#555", fg="#fff")
+        self.settings_button.grid(row=10, column=2, padx=10, pady=10, sticky="ew")
+
+        self.record_timer_label = tk.Label(self.bottom_half_frame, text="Recording Time: 00:00", font=("Helvetica", 12), bg="#2c2f33", fg="#fff")
+        self.record_timer_label.grid(row=11, column=0, columnspan=3, pady=5, sticky="ew")
+
+    def open_settings(self):
+        settings_window.open_settings_window(self.master, self.apply_settings)
+
+    def apply_settings(self, new_settings):
+        self.settings.update(new_settings)
+        self.resolution_entry.delete(0, tk.END)
+        self.resolution_entry.insert(0, self.settings["Video"]["canvas_resolution"])
+        self.fps_entry.delete(0, tk.END)
+        self.fps_entry.insert(0, self.settings["Video"]["fps"])
+        self.format_var.set(self.settings["Output"]["output_format"])
 
     def add_source(self):
         source_type = tk.simpledialog.askstring("Source Type", "Enter source type (image/window/capture):")
@@ -96,7 +132,7 @@ class ScreenRecorderApp:
             while self.screen_capture_active:
                 frame = sct.grab(monitor)
                 img = Image.frombytes("RGB", frame.size, frame.rgb)
-                img_resized = img.resize((640, 480))
+                img_resized = img.resize((1280, 360))
                 imgtk = ImageTk.PhotoImage(image=img_resized)
                 self.video_canvas.imgtk = imgtk
                 self.video_canvas.config(image=imgtk)
@@ -107,11 +143,7 @@ class ScreenRecorderApp:
         fps = int(self.fps_entry.get())
         width, height = map(int, resolution.split('x'))
         file_format = self.format_var.get()
-        source_type = self.source_entry.get().strip().lower()
-        record_audio = self.audio_checkbox.get()
-
-        if not source_type:
-            source_type = None
+        record_audio = self.audio_checkbutton.cget('text') == "Record Audio"
 
         file_type = filedialog.asksaveasfilename(defaultextension=f".{file_format}",
                                                  filetypes=[(ext.upper(), f"*.{ext}") for ext in ACCEPTABLE_FILE_EXTENSIONS])
@@ -119,12 +151,11 @@ class ScreenRecorderApp:
             return
 
         self.screen_capture_active = True
-        self.start_time = time.time()  # Timer starts here
+        self.start_time = time.time()
         threading.Thread(target=self.show_preview, daemon=True).start()
-        self.update_timer()  # Start updating the timer
+        self.update_timer()
 
-        command = video_capture_command(fps, width, height, record_audio, file_type, source_type)
-        print("FFmpeg Command:", " ".join(command))
+        command = video_capture_command(fps, width, height, record_audio, file_type)
         self.recording_process = subprocess.Popen(command)
 
         self.start_button.config(state="disabled")
@@ -134,8 +165,8 @@ class ScreenRecorderApp:
         if self.screen_capture_active:
             elapsed_time = int(time.time() - self.start_time)
             minutes, seconds = divmod(elapsed_time, 60)
-            self.record_timer_label.config(text=f"Recording Time: {minutes:02}:{seconds:02}")
             self.master.after(1000, self.update_timer)
+            self.record_timer_label.config(text=f"Recording Time: {minutes:02}:{seconds:02}")
 
     def stop_recording(self):
         self.screen_capture_active = False
@@ -145,11 +176,10 @@ class ScreenRecorderApp:
         self.video_canvas.config(image="")
         self.start_button.config(state="normal")
         self.stop_button.config(state="disabled")
-        self.record_timer_label.config(text="Recording Stopped")
         messagebox.showinfo("Recording Stopped", "Recording saved successfully.")
 
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("1200x600")
+    root.geometry("1280x720")
     app = ScreenRecorderApp(root)
     root.mainloop()

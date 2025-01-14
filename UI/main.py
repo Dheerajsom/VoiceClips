@@ -1,8 +1,8 @@
-from UI.app import run_app
+from app import ScreenRecorderApp
 
 def main():
     print("Starting the application...")
-    run_app()
+    ScreenRecorderApp()
 
 if __name__ == "__main__":
     main()
