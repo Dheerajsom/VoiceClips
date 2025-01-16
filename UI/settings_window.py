@@ -1,5 +1,5 @@
 # settings_window.py
-
+import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -28,7 +28,8 @@ def open_settings_window(parent, settings_callback):
 
     # Sidebar buttons for each section
     for section in sections:
-        button = tk.Button(sidebar, text=section, bg="#444", fg="#fff", command=lambda s=section: load_section(main_content, s, section_vars[s]))
+        button = tk.Button(sidebar, text=section, bg="#444", fg="#fff",
+                           command=lambda s=section: load_section(main_content, s, section_vars[s]))
         button.pack(fill=tk.X, pady=5)
 
     # Initial load of the "General" section
@@ -83,7 +84,7 @@ def load_section(main_content, section, variables):
         ttk.Label(main_content, text="Recording Path:", background="#2c2f33", foreground="#fff").pack(pady=5)
         recording_path_var = tk.StringVar(value="")
         ttk.Entry(main_content, textvariable=recording_path_var).pack(pady=5)
-        ttk.Button(main_content, text="Browse", command=lambda: browse_recording_path(recording_path_var)).pack(pady=5)
+        ttk.Button(main_content, text="Browse", command=lambda: browse_save_location(recording_path_var)).pack(pady=5)
         variables["recording_path"] = recording_path_var
 
         # Output format
@@ -92,6 +93,20 @@ def load_section(main_content, section, variables):
         output_format_menu = ttk.Combobox(main_content, textvariable=output_format_var, values=["MP4", "MKV", "FLV", "MOV"])
         output_format_menu.pack(pady=5)
         variables["output_format"] = output_format_var
+
+        ttk.Label(main_content, text="Clip Save Location:", background="#2c2f33", foreground="#fff").pack(pady=5)
+        save_location_var = tk.StringVar(value=os.path.expanduser("~/Documents"))
+        save_location_entry = ttk.Entry(main_content, textvariable=save_location_var)
+        save_location_entry.pack(pady=5)
+        ttk.Button(main_content, text="Browse", command=lambda: browse_save_location(save_location_var)).pack(pady=5)
+        variables["save_location"] = save_location_var
+
+        ttk.Label(main_content, text="Clip Format:", background="#2c2f33", foreground="#fff").pack(pady=5)
+        clip_format_var = tk.StringVar(value="mp4")
+        clip_format_menu = ttk.Combobox(main_content, textvariable=clip_format_var, values=["mp4", "avi", "mkv", "mov"])
+        clip_format_menu.pack(pady=5)
+        variables["clip_format"] = clip_format_var
+
 
     elif section == "Audio":
         ttk.Label(main_content, text="Audio Settings", font=("Helvetica", 16), background="#2c2f33", foreground="#fff").pack(pady=20)
@@ -159,7 +174,7 @@ def load_section(main_content, section, variables):
         variables["portable_mode"] = portable_mode_var
 
 # Helper function to browse recording path
-def browse_recording_path(var):
+def browse_save_location(var):
     path = filedialog.askdirectory()
     if path:
         var.set(path)
