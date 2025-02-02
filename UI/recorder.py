@@ -1,6 +1,6 @@
 # recorder.py
 import platform
-from utils import list_available_audio_devices, get_macos_devices
+from utils import list_available_audio_devices
 
 def video_capture_command(fps, width, height, audio, output_path, source_type="screen", window_title=None):
     system = platform.system()
@@ -11,7 +11,7 @@ def video_capture_command(fps, width, height, audio, output_path, source_type="s
 
     if system == "Darwin":  # macOS
         # Get available devices
-        devices_info = get_macos_devices()
+        devices_info = list_available_audio_devices()
         print(f"Available devices:\n{devices_info}")  # Debug info
         
         # Default device configuration for macOS
