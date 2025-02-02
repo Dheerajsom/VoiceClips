@@ -54,6 +54,16 @@ class Clipper:
     def set_file_format(self, format):
         """Set the file format for clips (mp4, mov, mkv, etc.)."""
         self.format = format.lower()
+    
+    def set_buffer_duration(self, duration):
+        """Set the buffer duration in seconds"""
+        self.buffer_duration = duration
+        # Update buffer sizes
+        if hasattr(self, 'frame_buffer'):
+            self.frame_buffer = deque(maxlen=duration * 30)  # 30 fps
+        if hasattr(self, 'audio_buffer'):
+            self.audio_buffer = deque(maxlen=duration * 44100 * 2)  # 44.1kHz stereo
+
 
     def save_clip(self):
         """Save the buffered content as a clip"""
@@ -65,93 +75,93 @@ class Clipper:
             self.clip_counter += 1
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             
-            # Create output filename
+            # Create output filename and temporary files
             output_filename = os.path.join(
                 self.output_folder, 
                 f"clip_{timestamp}_{self.clip_counter}.{self.format.lower()}"
             )
+            temp_video = os.path.join(self.output_folder, f"temp_video_{timestamp}.raw")
+            temp_audio = os.path.join(self.output_folder, f"temp_audio_{timestamp}.wav")
             
             print(f"Saving clip to: {output_filename}")
 
-            # Get system-specific FFmpeg command
-            system = platform.system()
-            
-            if system == "Darwin":  # macOS
-                command = [
-                    "ffmpeg",
-                    "-f", "avfoundation",
-                    "-framerate", "30",
-                    "-video_size", "1920x1080",  # Adjust based on your screen size
-                    "-capture_cursor", "1",
-                    "-capture_mouse_clicks", "1",
-                    "-i", "1:0",  # Screen:Audio device
-                    "-t", str(self.buffer_duration),  # Duration of the clip
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-pix_fmt", "yuv420p",
-                    "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-strict", "experimental",
-                    "-y",
-                    output_filename
-                ]
-            elif system == "Linux":
-                command = [
-                    "ffmpeg",
-                    "-f", "x11grab",
-                    "-r", "30",
-                    "-s", "1920x1080",
-                    "-i", ":0.0",
-                    "-f", "pulse",
-                    "-i", "default",
-                    "-t", str(self.buffer_duration),
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-y",
-                    output_filename
-                ]
-            else:  # Windows
-                audio_devices = list_available_audio_devices()
-                selected_audio_device = audio_devices[0] if "None" not in audio_devices else None
-                
-                command = [
-                    "ffmpeg",
-                    "-f", "gdigrab",
-                    "-framerate", "30",
-                    "-video_size", "1920x1080",
-                    "-i", "desktop",
-                ]
-
-                # Add audio input
-                if selected_audio_device:
-                    command.extend([
-                        "-f", "dshow",
-                        "-i", f"audio={selected_audio_device}"
-                    ])
-                else:
-                    command.extend([
-                        "-f", "lavfi",
-                        "-i", "anullsrc=channel_layout=stereo:sample_rate=44100"
-                    ])
-
-                # Add output options
-                command.extend([
-                    "-t", str(self.buffer_duration),
-                    "-c:v", "libx264",
-                    "-preset", "ultrafast",
-                    "-pix_fmt", "yuv420p",
-                    "-profile:v", "baseline",
-                    "-level", "3.0",
-                    "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-y",
-                    output_filename
-                ])
-
             try:
-                print(f"Running FFmpeg command: {' '.join(command)}")
+                # Save buffered video frames
+                with open(temp_video, 'wb') as f:
+                    frames = list(self.frame_buffer)
+                    for frame in frames:
+                        f.write(frame)
+
+                # Save buffered audio
+                if self.audio_buffer and len(self.audio_buffer) > 0:
+                    with wave.open(temp_audio, 'wb') as wf:
+                        wf.setnchannels(2)
+                        wf.setsampwidth(2)
+                        wf.setframerate(44100)
+                        wf.writeframes(b''.join(list(self.audio_buffer)))
+
+                # Create FFmpeg command for processing the buffered data
+                system = platform.system()
+                
+                if system == "Darwin":  # macOS
+                    command = [
+                        "ffmpeg",
+                        "-f", "rawvideo",
+                        "-vcodec", "rawvideo",
+                        "-s", "1920x1080",  # Make sure this matches your capture resolution
+                        "-pix_fmt", "rgb24",
+                        "-framerate", "30",
+                        "-i", temp_video
+                    ]
+
+                    if os.path.exists(temp_audio):
+                        command.extend([
+                            "-i", temp_audio,
+                            "-c:a", "aac",
+                            "-b:a", "192k"
+                        ])
+
+                    command.extend([
+                        "-c:v", "h264",
+                        "-preset", "ultrafast",
+                        "-pix_fmt", "yuv420p",
+                        "-profile:v", "high",
+                        "-r", "30",
+                        "-movflags", "+faststart",
+                        "-strict", "experimental",
+                        "-y",
+                        output_filename
+                    ])
+                else:  # Windows/Linux
+                    command = [
+                        "ffmpeg",
+                        "-f", "rawvideo",
+                        "-vcodec", "rawvideo",
+                        "-s", "1920x1080",
+                        "-pix_fmt", "rgb24",
+                        "-framerate", "30",
+                        "-i", temp_video
+                    ]
+
+                    if os.path.exists(temp_audio):
+                        command.extend([
+                            "-i", temp_audio,
+                            "-c:a", "aac",
+                            "-b:a", "192k"
+                        ])
+
+                    command.extend([
+                        "-c:v", "libx264",
+                        "-preset", "ultrafast",
+                        "-pix_fmt", "yuv420p",
+                        "-profile:v", "baseline",
+                        "-level", "3.0",
+                        "-r", "30",
+                        "-y",
+                        output_filename
+                    ])
+
+                print(f"Processing clip...")
                 result = subprocess.run(command, check=True, capture_output=True, text=True)
                 print(f"Clip saved successfully: {output_filename}")
                 
@@ -161,6 +171,12 @@ class Clipper:
                     print(f"FFmpeg error: {e.stderr}")
             except Exception as e:
                 print(f"Error saving clip: {e}")
+            finally:
+                # Clean up temporary files
+                if os.path.exists(temp_video):
+                    os.remove(temp_video)
+                if os.path.exists(temp_audio):
+                    os.remove(temp_audio)
     def listen_for_clips(self):
         """Continuously listens for clip commands."""
         try:

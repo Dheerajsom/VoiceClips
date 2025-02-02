@@ -18,6 +18,9 @@ import ttkbootstrap as ttkbs
 from audio_mixer import set_mic_volume, set_system_volume
 import io
 from PIL import Image
+from pynput import keyboard
+import re
+
 
 class ScreenRecorderApp:
     def __init__(self, master):
@@ -49,6 +52,8 @@ class ScreenRecorderApp:
                 "output_format": "MP4",
                 "save_location": os.path.expanduser("~/Documents"),
                 "clip_format": "mp4"
+                "clip_duration" "30",  # Add this
+                "clip_hotkey": "Ctrl+C"  # Add this
             },
             "Audio": {
                 "desktop_audio_device": "Default",
@@ -72,6 +77,9 @@ class ScreenRecorderApp:
 
         # Initialize audio components
         self.init_audio()
+
+        self.hotkey_listener = None
+        self.setup_hotkey_listener()
 
     def init_audio(self):
         """Initialize audio components"""
@@ -168,6 +176,63 @@ class ScreenRecorderApp:
         self.clip_status_label = ttkbs.Label(control_frame, text="Voice Command: Ready", font=("Helvetica", 12))
         self.clip_status_label.grid(row=9, column=0, columnspan=2, pady=5, sticky="ew")
 
+    def setup_hotkey_listener(self):
+        """Setup keyboard listener for clip hotkey"""
+        if self.hotkey_listener:
+            self.hotkey_listener.stop()
+
+        def on_press(key):
+            try:
+                # Get current hotkey setting
+                hotkey = self.settings["Output"]["clip_hotkey"]
+                # Parse hotkey string (e.g., "Ctrl+C")
+                modifiers, main_key = self.parse_hotkey(hotkey)
+                
+                # Check if the pressed key matches the hotkey
+                if self.is_hotkey_pressed(key, modifiers, main_key):
+                    if self.screen_capture_active:  # Only clip if recording
+                        print(f"Clip hotkey pressed: {hotkey}")
+                        self.clipper.save_clip()
+            except Exception as e:
+                print(f"Hotkey error: {e}")
+
+        self.hotkey_listener = keyboard.Listener(on_press=on_press)
+        self.hotkey_listener.start()
+
+    def parse_hotkey(self, hotkey_str):
+        """Parse hotkey string into modifiers and main key"""
+        parts = hotkey_str.split('+')
+        main_key = parts[-1].strip().lower()
+        modifiers = [mod.strip().lower() for mod in parts[:-1]]
+        return modifiers, main_key
+
+    def is_hotkey_pressed(self, key, modifiers, main_key):
+        """Check if the pressed key matches the hotkey combination"""
+        try:
+            # Get the key character
+            if hasattr(key, 'char'):
+                key_char = key.char.lower()
+            else:
+                key_char = key.name.lower()
+
+            # Check if the main key matches
+            if key_char != main_key:
+                return False
+
+            # Check modifiers
+            ctrl_pressed = keyboard.Controller().pressed(keyboard.Key.ctrl)
+            shift_pressed = keyboard.Controller().pressed(keyboard.Key.shift)
+            alt_pressed = keyboard.Controller().pressed(keyboard.Key.alt)
+
+            # Verify all required modifiers are pressed
+            return (('ctrl' in modifiers) == ctrl_pressed and
+                   ('shift' in modifiers) == shift_pressed and
+                   ('alt' in modifiers) == alt_pressed)
+        except Exception as e:
+            print(f"Error checking hotkey: {e}")
+            return False
+
+
     def adjust_mic_volume(self, volume):
         """Adjust microphone volume."""
         set_mic_volume(int(float(volume)))
@@ -180,7 +245,10 @@ class ScreenRecorderApp:
         settings_window.open_settings_window(self.master, self.apply_settings)
 
     def apply_settings(self, new_settings):
+        """Apply new settings including clip duration and hotkey"""
         self.settings.update(new_settings)
+        
+        # Update UI elements
         self.resolution_entry.delete(0, tk.END)
         self.resolution_entry.insert(0, self.settings["Video"]["canvas_resolution"])
         self.fps_entry.delete(0, tk.END)
@@ -193,8 +261,28 @@ class ScreenRecorderApp:
         self.clipper.set_save_location(save_location)
         self.clipper.set_file_format(self.settings["Output"]["clip_format"])
         
-        print(f"Settings applied: Save location: {save_location}, Format: {self.settings['Output']['clip_format']}")
+        # Update clip duration
+        try:
+            clip_duration = int(self.settings["Output"]["clip_duration"])
+            self.clipper.set_buffer_duration(clip_duration)
+        except ValueError:
+            print("Invalid clip duration, using default (30 seconds)")
+            self.clipper.set_buffer_duration(30)
+        
+        # Update hotkey listener
+        self.setup_hotkey_listener()
+        
+        print(f"Settings applied: Save location: {save_location}, "
+              f"Format: {self.settings['Output']['clip_format']}, "
+              f"Duration: {self.settings['Output']['clip_duration']}s, "
+              f"Hotkey: {self.settings['Output']['clip_hotkey']}")
 
+    def __del__(self):
+        """Cleanup on application close"""
+        if hasattr(self, 'audio'):
+            self.audio.terminate()
+        if hasattr(self, 'hotkey_listener'):
+            self.hotkey_listener.stop()  
     def start_recording(self):
         resolution = self.resolution_entry.get().strip()
         if not resolution:

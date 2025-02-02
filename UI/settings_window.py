@@ -107,6 +107,20 @@ def load_section(main_content, section, variables):
         clip_format_menu.pack(pady=5)
         variables["clip_format"] = clip_format_var
 
+        # Add Clip Duration setting
+        ttk.Label(main_content, text="Clip Duration (seconds):", background="#2c2f33", foreground="#fff").pack(pady=5)
+        clip_duration_var = tk.StringVar(value="30")
+        clip_duration_entry = ttk.Entry(main_content, textvariable=clip_duration_var)
+        clip_duration_entry.pack(pady=5)
+        variables["clip_duration"] = clip_duration_var
+
+        # Add Clip Hotkey setting
+        ttk.Label(main_content, text="Clip Hotkey:", background="#2c2f33", foreground="#fff").pack(pady=5)
+        clip_hotkey_var = tk.StringVar(value="Ctrl+C")
+        clip_hotkey_entry = ttk.Entry(main_content, textvariable=clip_hotkey_var)
+        clip_hotkey_entry.pack(pady=5)
+        variables["clip_hotkey"] = clip_hotkey_var
+
 
     elif section == "Audio":
         ttk.Label(main_content, text="Audio Settings", font=("Helvetica", 16), background="#2c2f33", foreground="#fff").pack(pady=20)
