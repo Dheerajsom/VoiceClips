@@ -8,14 +8,19 @@ import pyaudio
 from rapidfuzz import fuzz
 import platform
 import wave
-import io
-from PIL import Image
-from utils import list_available_audio_devices, get_macos_devices
+import requests
+import zipfile
+import shutil
+from pathlib import Path
+
 class Clipper:
+    DEFAULT_MODEL_NAME = "vosk-model-small-en-us-0.15"
+    MODEL_URL = f"https://alphacephei.com/vosk/models/{DEFAULT_MODEL_NAME}.zip"
+    
     def __init__(self, buffer_duration=30, output_folder="clips", format="mp4", model_path=None):
         self.buffer_duration = buffer_duration
-        self.output_folder = os.path.expanduser(output_folder)  # Expand user path
-        self.format = format.lower()  # Ensure lowercase format
+        self.output_folder = os.path.expanduser(output_folder)
+        self.format = format.lower()
         self.is_listening = False
         self.frame_buffer = None
         self.audio_buffer = None
@@ -25,20 +30,76 @@ class Clipper:
         # Create output folder if it doesn't exist
         os.makedirs(self.output_folder, exist_ok=True)
 
-        # Vosk model setup
-        if model_path is None:
-            default_model_path = os.path.expanduser("~/Downloads/vosk-model-en-us-0.22")
-            if os.path.isdir(default_model_path):
-                model_path = default_model_path
-                print(f"Using default model path: {model_path}")
-            else:
-                raise FileNotFoundError("Vosk model path is invalid or not found.")
-
+        # Initialize the model path
+        self.model_path = self._initialize_model(model_path)
+        
         try:
-            self.model = vosk.Model(model_path)
+            self.model = vosk.Model(self.model_path)
             self.audio_stream = pyaudio.PyAudio()
         except Exception as e:
             raise Exception(f"Failed to initialize: {str(e)}")
+
+    def _initialize_model(self, model_path=None):
+        """Initialize and return the appropriate model path, downloading if necessary."""
+        if model_path and os.path.isdir(model_path):
+            return model_path
+
+        # Define default paths
+        app_data_dir = self._get_app_data_dir()
+        default_model_path = os.path.join(app_data_dir, "vosk_models", self.DEFAULT_MODEL_NAME)
+
+        # If model doesn't exist in default location, download it
+        if not os.path.isdir(default_model_path):
+            print(f"Vosk model not found. Downloading to {default_model_path}...")
+            self._download_and_extract_model(default_model_path)
+
+        return default_model_path
+
+    def _get_app_data_dir(self):
+        """Get the appropriate application data directory for the current platform."""
+        system = platform.system()
+        if system == "Windows":
+            app_data = os.getenv("APPDATA")
+            return os.path.join(app_data, "Clipper")
+        elif system == "Darwin":  # macOS
+            return os.path.expanduser("~/Library/Application Support/Clipper")
+        else:  # Linux and others
+            return os.path.expanduser("~/.clipper")
+
+    def _download_and_extract_model(self, model_path):
+        """Download and extract the Vosk model."""
+        try:
+            # Create temporary directory for download
+            temp_dir = os.path.join(self._get_app_data_dir(), "temp")
+            os.makedirs(temp_dir, exist_ok=True)
+            zip_path = os.path.join(temp_dir, f"{self.DEFAULT_MODEL_NAME}.zip")
+
+            # Download the model
+            print("Downloading Vosk model...")
+            response = requests.get(self.MODEL_URL, stream=True)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 8192
+            
+            with open(zip_path, 'wb') as f:
+                for data in response.iter_content(block_size):
+                    f.write(data)
+
+            # Extract the model
+            print("Extracting model...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(os.path.dirname(model_path))
+
+            # Clean up
+            os.remove(zip_path)
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+
+            print("Model downloaded and extracted successfully!")
+
+        except Exception as e:
+            raise Exception(f"Failed to download model: {str(e)}")
 
     def set_buffers(self, frame_buffer, audio_buffer):
         """Set the frame and audio buffers from the main app"""
@@ -63,7 +124,6 @@ class Clipper:
             self.frame_buffer = deque(maxlen=duration * 30)  # 30 fps
         if hasattr(self, 'audio_buffer'):
             self.audio_buffer = deque(maxlen=duration * 44100 * 2)  # 44.1kHz stereo
-
 
     def save_clip(self):
         """Save the buffered content as a clip"""
@@ -177,6 +237,7 @@ class Clipper:
                     os.remove(temp_video)
                 if os.path.exists(temp_audio):
                     os.remove(temp_audio)
+
     def listen_for_clips(self):
         """Continuously listens for clip commands."""
         try:
@@ -220,7 +281,7 @@ class Clipper:
                                 
                                 # Check for clip command
                                 current_time = time.time()
-                                clip_words = ['clip', 'clips', 'clipped', 'click', 'quick','cli','clis']
+                                clip_words = ['clip', 'clips', 'clipped', 'click', 'quick', 'cli', 'clis']
                                 
                                 # Direct match check
                                 clip_detected = any(word in cleaned_text for word in clip_words)
@@ -258,6 +319,7 @@ class Clipper:
                 stream.stop_stream()
                 stream.close()
             print("\nVoice Command System Stopped")
+
     def start_listening(self):
         """Starts the speech recognition in a new thread."""
         threading.Thread(target=self.listen_for_clips, daemon=True).start()
